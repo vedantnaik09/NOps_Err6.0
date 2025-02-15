@@ -1,2 +1,5 @@
 venv
 .env
+new_venv
+llama_venv/
+__pycache__
