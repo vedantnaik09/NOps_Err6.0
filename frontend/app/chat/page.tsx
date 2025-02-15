@@ -15,7 +15,7 @@ const ChatbotPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [messages, setMessages] = useState<
     { role: string; text: string; queryType?: string; data?: any; generatedQueries?: any; taskExecution?: any; pinecone?: any }[]
-  >([{ role: "system", text: "Please upload a PDF to start the conversation." }]);
+  >([{ role: "system", text: "Please upload a PDF to start the conversation. After uploading click on go to dashboard to get more insights." }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -89,7 +89,7 @@ const ChatbotPage = () => {
 
   // Retrieve the user ID from localStorage on component mount.
   useEffect(() => {
-    const userDataString = localStorage.getItem('userData');
+    const userDataString = localStorage.getItem("userData");
     if (userDataString) {
       try {
         const userData = JSON.parse(userDataString);
@@ -109,7 +109,6 @@ const ChatbotPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
 
   // Function to send a message.
   const sendMessage = async () => {
@@ -131,14 +130,14 @@ const ChatbotPage = () => {
       }
 
       // Get token from localStorage
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       const response = await fetch("http://localhost:8000/api/users/query/", {
         method: "POST",
         body: formData,
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
@@ -187,13 +186,13 @@ const ChatbotPage = () => {
     const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
 
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       const response = await fetch("http://localhost:8000/api/users/prompt", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
@@ -241,45 +240,45 @@ const ChatbotPage = () => {
 
   // Function to start a new chat session.
   const startNewChat = () => {
-    setMessages([{ role: "system", text: "Please upload a PDF to start the conversation." }]);
+    setMessages([{ role: "system", text: "Please upload a PDF to start the conversation. After uploading click on go to dashboard to get more insights." }]);
     setConversationId(null);
     setRefreshChatHistory((prev) => !prev);
     setIsPdfUploaded(false);
   };
 
-// Update the loadConversation function in ChatbotPage
-const loadConversation = async (convId: string) => {
+  // Update the loadConversation function in ChatbotPage
+  const loadConversation = async (convId: string) => {
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:8000/api/users/chat/${convId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) throw new Error("Failed to load conversation");
-        
-        const data = await response.json();
-        if (data && data.messages) {
-            setMessages(
-                data.messages.map((msg: any) => ({
-                    role: msg.role === "assistant" ? "bot" : msg.role, // Keep system role as-is
-                    text: msg.content,
-                    timestamp: msg.timestamp
-                }))
-            );
-            setConversationId(convId);
-            
-            // Load any associated PDF files
-            if (data.pdf_files && data.pdf_files.length > 0) {
-                setIsPdfUploaded(true);
-                setAttachedFileNames([]);
-            }
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:8000/api/users/chat/${convId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to load conversation");
+
+      const data = await response.json();
+      if (data && data.messages) {
+        setMessages(
+          data.messages.map((msg: any) => ({
+            role: msg.role === "assistant" ? "bot" : msg.role, // Keep system role as-is
+            text: msg.content,
+            timestamp: msg.timestamp,
+          }))
+        );
+        setConversationId(convId);
+
+        // Load any associated PDF files
+        if (data.pdf_files && data.pdf_files.length > 0) {
+          setIsPdfUploaded(true);
+          setAttachedFileNames([]);
         }
+      }
     } catch (error) {
-        console.error("Error loading conversation:", error);
+      console.error("Error loading conversation:", error);
     }
-};
+  };
   // Callback for selecting a chat from the sidebar.
   const handleSelectChat = async (convId: string) => {
     console.log("Selected conversation:", convId);
@@ -313,7 +312,7 @@ const loadConversation = async (convId: string) => {
   const handleFileUpload = async () => {
     if (selectedFiles.length === 0) return;
     setIsLoading(true);
-  
+
     const formData = new FormData();
     selectedFiles.forEach((file) => {
       formData.append(`files`, file);
@@ -322,35 +321,35 @@ const loadConversation = async (convId: string) => {
     if (conversationId) {
       formData.append("conversation_id", conversationId);
     }
-  
+
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       const response = await fetch("http://localhost:8000/api/users/process-pdfs/", {
         method: "POST",
         body: formData,
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to process PDFs");
       }
-  
+
       const data = await response.json();
-  
+
       if (!conversationId && data.conversation_id) {
         setConversationId(data.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
-  
+
       // Store the HTML data but don't display it
-    //   if (data.html && data.conversation_id) {
-    //     console.log(`knowledgeGraphData_${data.conversation_id}`)
-    //     localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
-    //   }
-      
+      //   if (data.html && data.conversation_id) {
+      //     console.log(`knowledgeGraphData_${data.conversation_id}`)
+      //     localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
+      //   }
+
       setIsPdfUploaded(true);
       setMessages((prev) => [
         ...prev,
@@ -359,7 +358,7 @@ const loadConversation = async (convId: string) => {
           text: data.message || `${selectedFiles.length} PDF(s) processed successfully!`,
           data: {
             status: data.status,
-            message: data.message
+            message: data.message,
           },
         },
       ]);
@@ -378,14 +377,14 @@ const loadConversation = async (convId: string) => {
       setAttachedFileNames([]);
     }
   };
-  
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       // Filter only PDF files
-      const pdfFiles = files.filter(file => file.type === 'application/pdf');
-      setSelectedFiles(prevFiles => [...prevFiles, ...pdfFiles]);
-      setAttachedFileNames(prevNames => [...prevNames, ...pdfFiles.map(file => file.name)]);
+      const pdfFiles = files.filter((file) => file.type === "application/pdf");
+      setSelectedFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+      setAttachedFileNames((prevNames) => [...prevNames, ...pdfFiles.map((file) => file.name)]);
       setInput(""); // Clear any text input when files are attached
     }
   };
@@ -411,65 +410,55 @@ const loadConversation = async (convId: string) => {
       />
 
       <div className="flex flex-col h-screen w-full bg-[#0A0A0F]">
-        <header className="shadow-lg border border-b-2 p-6 text-center text-2xl font-bold text-white flex gap-2 items-center">
-          <Link href="/">
-            <ArrowLeft />
-          </Link>
-          <span>AI Chat Assistant</span>
+        <header className="shadow-lg border border-b-2 p-6 text-center text-2xl font-bold text-white flex gap-2 justify-between">
+          <div className="flex">
+            <Link href="/">
+              <ArrowLeft />
+            </Link>
+            <span>AI Chat Assistant</span>
+          </div>
+          {isPdfUploaded && <Link href={`/dashboard/${conversationId}`} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm">Go to dashboard</Link>}
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, index) => (
-    <div key={index} className="space-y-2">
-      <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-        <div
-          className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
-            msg.role === "user" 
-              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white" 
-              : msg.role === "system"
-              ? "bg-gray-800 text-green-400"  // System messages in green
-              : "bg-gray-800 text-white"   // Bot messages in gray
-          }`}
-        >
-          <div className="flex items-start space-x-3">
-            {(msg.role === "bot" || msg.role === "system") && (
-              <Bot className="w-6 h-6 mt-1 text-white/80" />
-            )}
-            <div className="space-y-2 w-full">
-              {msg.data && msg.data.status === "success" ? (
-                <div className="text-green-400">
-                  {msg.data.message || msg.text}
+          {messages.map((msg, index) => (
+            <div key={index} className="space-y-2">
+              <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                      : msg.role === "system"
+                      ? "bg-gray-800 text-green-400" // System messages in green
+                      : "bg-gray-800 text-white" // Bot messages in gray
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    {(msg.role === "bot" || msg.role === "system") && <Bot className="w-6 h-6 mt-1 text-white/80" />}
+                    <div className="space-y-2 w-full">
+                      {msg.data && msg.data.status === "success" ? (
+                        <div className="text-green-400">{msg.data.message || msg.text}</div>
+                      ) : (
+                        <div className="message-content">{msg.text}</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="message-content">
-                  {msg.text}
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      </div>
-    </div>
-  ))}
-  {isLoading && (
-    <div className="flex justify-start">
-      <Loader2 className="w-5 h-5 animate-spin text-white/60" />
-    </div>
-  )}
-  <div ref={messagesEndRef} />
-</div>
         <div className="bg-gray-900 p-4 flex items-center border-t border-gray-700">
           <div className="flex-1 relative flex items-center">
             <label htmlFor="file-upload" className="p-3 text-white/80 hover:text-white cursor-pointer" title="Attach PDFs">
               <FileUp className="w-5 h-5" />
             </label>
-            <input 
-              type="file" 
-              id="file-upload" 
-              className="hidden" 
-              accept=".pdf" 
-              multiple 
-              onChange={handleFileSelect} 
-            />
+            <input type="file" id="file-upload" className="hidden" accept=".pdf" multiple onChange={handleFileSelect} />
             <div className="flex-1 relative">
               {attachedFileNames.length > 0 ? (
                 <div className="w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700">
@@ -480,13 +469,9 @@ const loadConversation = async (convId: string) => {
                 <input
                   type="text"
                   className={`w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
-                    (!isPdfUploaded && selectedFiles.length === 0) ? 'cursor-not-allowed' : ''
+                    !isPdfUploaded && selectedFiles.length === 0 ? "cursor-not-allowed" : ""
                   }`}
-                  placeholder={
-                    !isPdfUploaded && selectedFiles.length === 0
-                      ? "Please upload PDFs first"
-                      : "Type your message..."
-                  }
+                  placeholder={!isPdfUploaded && selectedFiles.length === 0 ? "Please upload PDFs first" : "Type your message..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (isPdfUploaded || selectedFiles.length > 0) && handleSend()}
@@ -512,8 +497,8 @@ const loadConversation = async (convId: string) => {
             onClick={handleSend}
             className={`ml-2 p-3 rounded-full ${
               isPdfUploaded || selectedFiles.length > 0
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
-                : 'bg-gray-600 cursor-not-allowed'
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
+                : "bg-gray-600 cursor-not-allowed"
             } transition-colors`}
             disabled={isLoading || (!input.trim() && selectedFiles.length === 0) || (!isPdfUploaded && selectedFiles.length === 0)}
             title={!isPdfUploaded && selectedFiles.length === 0 ? "Upload a PDF first" : "Send message"}
@@ -524,8 +509,8 @@ const loadConversation = async (convId: string) => {
             onClick={() => setIsVoiceModalOpen(true)}
             className={`ml-2 p-3 rounded-full ${
               isPdfUploaded
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
-                : 'bg-gray-600 cursor-not-allowed'
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
+                : "bg-gray-600 cursor-not-allowed"
             } transition-colors`}
             disabled={isLoading || selectedFiles.length > 0 || !isPdfUploaded}
             title={!isPdfUploaded ? "Upload a PDF first" : "Voice input"}
