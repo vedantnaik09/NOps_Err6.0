@@ -103,7 +103,7 @@ def detect(extracted_text_list):
     
     # Initialize the latest model
     model = genai.GenerativeModel(
-        model_name='gemini-2.0-flash',
+        model_name='gemini-2.0-flash-thinking-exp',
         generation_config={
             "temperature": 0.1,
             # "response_mime_type": "application/json",
