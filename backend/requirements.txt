@@ -14,3 +14,4 @@ pyvis
 python-multipart
 motor
 pymongo
+google-generativeai

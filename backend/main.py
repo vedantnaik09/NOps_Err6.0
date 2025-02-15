@@ -16,7 +16,7 @@ app = FastAPI()
 
 # Allow requests only from your Next.js frontend running on localhost:3000
 origins = [
-    "http://localhost:3000",
+    "*",
 ]
 
 app.add_middleware(
