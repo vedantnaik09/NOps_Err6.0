@@ -79,7 +79,7 @@ export function Navbar() {
               href="/auth"
               className="px-4 py-2 bg-[#7165E3] rounded-lg hover:bg-[#5B4ED1] text-white"
             >
-              Create Account
+              Get Started
             </Link>
           )}
         </div>
