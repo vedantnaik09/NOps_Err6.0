@@ -25,8 +25,8 @@ const ChatbotPage = () => {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [attachedFileNames, setAttachedFileNames] = useState<string[]>([]);
   const [isPdfUploaded, setIsPdfUploaded] = useState<boolean>(false);
 
   // Speech function using the browser API.
@@ -143,7 +143,7 @@ const ChatbotPage = () => {
 
     try {
       const formData = new FormData();
-      formData.append("text", userInput);
+      formData.append("query", userInput);
       formData.append("user_id", userId || "");
       if (conversationId) {
         formData.append("conversation_id", conversationId);
@@ -152,7 +152,7 @@ const ChatbotPage = () => {
       // Get token from localStorage
       const token = localStorage.getItem('token');
 
-      const response = await fetch("http://localhost:8000/api/users/process_text/", {
+      const response = await fetch("http://localhost:8000/api/users/query/", {
         method: "POST",
         body: formData,
         headers: {
@@ -324,82 +324,89 @@ const ChatbotPage = () => {
 
   // Function to handle file upload
   const handleFileUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
     setIsLoading(true);
-
+  
     const formData = new FormData();
-    formData.append("file", selectedFile);
+    selectedFiles.forEach((file) => {
+      formData.append(`files`, file);
+    });
     formData.append("user_id", userId || "");
     if (conversationId) {
       formData.append("conversation_id", conversationId);
     }
-
+  
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch("http://localhost:8000/api/users/process_pdf/", {
+      const response = await fetch("http://localhost:8000/api/users/process-pdfs/", {
         method: "POST",
         body: formData,
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
+  
       if (!response.ok) {
-        throw new Error("Failed to process PDF");
+        throw new Error("Failed to process PDFs");
       }
-
+  
       const data = await response.json();
-
-      // Update conversation ID if not already set
+  
       if (!conversationId && data.conversation_id) {
         setConversationId(data.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
-
-      // Store the response in localStorage with the conversation ID
-      localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
-
-      // After successful PDF upload
+  
+      // Store the HTML data but don't display it
+    //   if (data.html && data.conversation_id) {
+    //     console.log(`knowledgeGraphData_${data.conversation_id}`)
+    //     localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
+    //   }
+      
       setIsPdfUploaded(true);
-
-      // Add message to show PDF was processed
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          text: "PDF processed successfully! You can now ask questions about its content.",
-          data: data,
+          text: data.message || `${selectedFiles.length} PDF(s) processed successfully!`,
+          data: {
+            status: data.status,
+            message: data.message
+          },
         },
       ]);
     } catch (error) {
-      console.error("Error processing PDF:", error);
+      console.error("Error processing PDFs:", error);
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          text: "An error occurred while processing the PDF file.",
+          text: "An error occurred while processing the PDF files.",
         },
       ]);
     } finally {
       setIsLoading(false);
-      setSelectedFile(null);
+      setSelectedFiles([]);
+      setAttachedFileNames([]);
     }
   };
-
+  
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setAttachedFileName(file.name);
-      setInput(""); // Clear any text input when file is attached
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // Filter only PDF files
+      const pdfFiles = files.filter(file => file.type === 'application/pdf');
+      setSelectedFiles(prevFiles => [...prevFiles, ...pdfFiles]);
+      setAttachedFileNames(prevNames => [...prevNames, ...pdfFiles.map(file => file.name)]);
+      setInput(""); // Clear any text input when files are attached
     }
   };
 
   const handleSend = async () => {
-    if (selectedFile) {
+    if (selectedFiles.length > 0) {
       await handleFileUpload();
-      setAttachedFileName(null); // Clear the file name after upload
+      setAttachedFileNames([]); // Clear the file names after upload
     } else {
       await sendMessage();
     }
@@ -436,14 +443,11 @@ const ChatbotPage = () => {
           <div className="flex items-start space-x-3">
             {msg.role === "bot" && <Bot className="w-6 h-6 mt-1 text-white/80" />}
             <div className="space-y-2 w-full">
-              {/* Handle PDF upload response */}
-              {msg.data && msg.data.status === "success" && (
+              {msg.data && msg.data.status === "success" ? (
                 <div className="text-green-400">
-                  {msg.data.content}
+                  {msg.data.message || msg.text}
                 </div>
-              )}
-              {/* Handle text response */}
-              {!msg.data && (
+              ) : (
                 <div className="message-content">
                   {msg.text}
                 </div>
@@ -463,50 +467,64 @@ const ChatbotPage = () => {
 </div>
         <div className="bg-gray-900 p-4 flex items-center border-t border-gray-700">
           <div className="flex-1 relative flex items-center">
-            <label htmlFor="file-upload" className="p-3 text-white/80 hover:text-white cursor-pointer" title="Attach PDF">
+            <label htmlFor="file-upload" className="p-3 text-white/80 hover:text-white cursor-pointer" title="Attach PDFs">
               <FileUp className="w-5 h-5" />
             </label>
-            <input type="file" id="file-upload" className="hidden" accept=".pdf" onChange={handleFileSelect} />
-            <input
-              type="text"
-              className={`w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
-                (!isPdfUploaded && !selectedFile) ? 'cursor-not-allowed' : ''
-              }`}
-              placeholder={
-                !isPdfUploaded && !selectedFile
-                  ? "Please upload a PDF first"
-                  : selectedFile 
-                    ? `Selected file: ${selectedFile.name}`
-                    : "Type your message..."
-              }
-              value={selectedFile ? "" : input}
-              onChange={(e) => !selectedFile && setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (isPdfUploaded || selectedFile) && handleSend()}
-              disabled={!isPdfUploaded && !selectedFile}
+            <input 
+              type="file" 
+              id="file-upload" 
+              className="hidden" 
+              accept=".pdf" 
+              multiple 
+              onChange={handleFileSelect} 
             />
-            {(voiceTranscript || attachedFileName) && (
-              <button
-                onClick={() => {
-                  handleDiscardInput();
-                  setSelectedFile(null);
-                  setAttachedFileName(null);
-                }}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-white/80 hover:text-red-500"
-                title="Clear input"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
+            <div className="flex-1 relative">
+              {attachedFileNames.length > 0 ? (
+                <div className="w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700">
+                  <span className="text-gray-400">Selected files: </span>
+                  {attachedFileNames.join(", ")}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  className={`w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
+                    (!isPdfUploaded && selectedFiles.length === 0) ? 'cursor-not-allowed' : ''
+                  }`}
+                  placeholder={
+                    !isPdfUploaded && selectedFiles.length === 0
+                      ? "Please upload PDFs first"
+                      : "Type your message..."
+                  }
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (isPdfUploaded || selectedFiles.length > 0) && handleSend()}
+                  disabled={!isPdfUploaded && selectedFiles.length === 0}
+                />
+              )}
+              {(voiceTranscript || attachedFileNames.length > 0) && (
+                <button
+                  onClick={() => {
+                    handleDiscardInput();
+                    setSelectedFiles([]);
+                    setAttachedFileNames([]);
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-white/80 hover:text-red-500"
+                  title="Clear input"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={handleSend}
             className={`ml-2 p-3 rounded-full ${
-              isPdfUploaded || selectedFile
+              isPdfUploaded || selectedFiles.length > 0
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
                 : 'bg-gray-600 cursor-not-allowed'
             } transition-colors`}
-            disabled={isLoading || (!input.trim() && !selectedFile) || (!isPdfUploaded && !selectedFile)}
-            title={!isPdfUploaded && !selectedFile ? "Upload a PDF first" : "Send message"}
+            disabled={isLoading || (!input.trim() && selectedFiles.length === 0) || (!isPdfUploaded && selectedFiles.length === 0)}
+            title={!isPdfUploaded && selectedFiles.length === 0 ? "Upload a PDF first" : "Send message"}
           >
             <Send className="w-5 h-5" />
           </button>
@@ -517,7 +535,7 @@ const ChatbotPage = () => {
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
                 : 'bg-gray-600 cursor-not-allowed'
             } transition-colors`}
-            disabled={isLoading || !!selectedFile || !isPdfUploaded}
+            disabled={isLoading || selectedFiles.length > 0 || !isPdfUploaded}
             title={!isPdfUploaded ? "Upload a PDF first" : "Voice input"}
           >
             <Mic className="w-5 h-5" />
