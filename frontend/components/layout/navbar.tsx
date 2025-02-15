@@ -42,7 +42,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className="w-full fixed p-3 z-20 bg-gray-800">
+    <nav className="w-full fixed p-3 z-20">
       <div className="flex justify-between items-center w-full">
         {/* Left: Logo */}
         <Link href="/" className="flex items-center ml-3">
