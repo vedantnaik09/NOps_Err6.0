@@ -342,7 +342,7 @@ const ChatbotPage = () => {
       />
 
       <div className="flex flex-col h-screen w-full bg-[#0A0A0F]">
-        <header className="bg-[#1F1F2E] shadow-sm p-4 text-center text-xl font-semibold text-white flex gap-2 items-center">
+        <header className="shadow-lg border border-b-2 p-6 text-center text-2xl font-bold text-white flex gap-2 items-center">
           <Link href="/"><ArrowLeft /></Link>
           <span>AI Chat Assistant</span>
         </header>
@@ -370,16 +370,14 @@ const ChatbotPage = () => {
                   </div>
                 )}
                 <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-3xl p-3 rounded-lg shadow-sm border ${
-                      msg.role === "user"
-                        ? "bg-[#7165E3] text-white"
-                        : "bg-white/5 text-white"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-2">
+                  <div className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
+                      : "bg-gray-800 text-white"
+                  }`}>
+                    <div className="flex items-start space-x-3">
                       {msg.role === "bot" && (
-                        <Bot className="w-5 h-5 mt-1 text-white/60" />
+                        <Bot className="w-6 h-6 mt-1 text-white/80" />
                       )}
                       <div className="space-y-2 w-full">
                         <div
@@ -387,12 +385,12 @@ const ChatbotPage = () => {
                           dangerouslySetInnerHTML={{ __html: formatMessage(messageText) }}
                         />
                         {msg.queryType && (
-                          <div className="mt-2 text-xs text-white/60 flex items-center justify-between">
+                          <div className="mt-2 text-xs text-white/80 flex items-center justify-between">
                             <span>Source: {msg.queryType}</span>
                             {hasDetails && (
                               <button
                                 onClick={() => toggleMessageExpansion(index)}
-                                className="flex items-center gap-1 text-white/60 hover:text-white"
+                                className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
                               >
                                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 <span>{isExpanded ? 'Hide Details' : 'Show Details'}</span>
@@ -457,11 +455,11 @@ const ChatbotPage = () => {
           )}
           <div ref={messagesEndRef} />
         </div>
-        <div className="bg-[#0b0b17] p-4 flex items-center border-t border-gray-700">
+        <div className="bg-gray-900 p-4 flex items-center border-t border-gray-700">
           <div className="flex-1 relative">
             <input
               type="text"
-              className="w-full p-2 bg-[#0A0A0F] text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7165E3] focus:border-none pr-20"
+              className="w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
               placeholder="Type your message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -470,7 +468,7 @@ const ChatbotPage = () => {
             {voiceTranscript && (
               <button
                 onClick={handleDiscardInput}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-white/60 hover:text-red-500"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-white/80 hover:text-red-500"
                 title="Discard voice input"
               >
                 <X className="h-5 w-5" />
@@ -479,14 +477,14 @@ const ChatbotPage = () => {
           </div>
           <button
             onClick={sendMessage}
-            className="ml-2 p-2 rounded-lg bg-[#7165E3] text-white hover:bg-[#5B4ED1] transition-colors"
+            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
             disabled={isLoading}
           >
             <Send className="w-5 h-5" />
           </button>
           <button
             onClick={() => setIsVoiceModalOpen(true)}
-            className="ml-2 p-2 rounded-lg bg-[#7165E3] text-white hover:bg-[#5B4ED1] transition-colors"
+            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
             disabled={isLoading}
           >
             <Mic className="w-5 h-5" />

@@ -39,8 +39,9 @@ export function Hero() {
 
   return (
     <section className="relative min-h-[90vh] flex items-center">
-      <div />
-      <div className="container mx-auto px-4 py-20">
+
+
+      <div className="relative bg-black/[0.85] min-h-screen w-full mx-auto px-4 py-20 z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-purple-100/20">
             <Sparkles className="h-4 w-4 text-purple-600" />

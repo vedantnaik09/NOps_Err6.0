@@ -83,13 +83,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSelectChat, onNewC
 
   return (
     <div 
-      className={`top-0 left-0 min-h-screen max-h-screen w-64 border border-r-2 bg-[#0e0e18] shadow-lg transform transition-transform duration-300 ease-in-out ${
+      className={`top-0 left-0 min-h-screen max-h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } z-50`}
     >
       <button 
         onClick={onClose}
-        className="md:hidden absolute right-2 top-2 p-2 text-gray-300 hover:text-white"
+        className="md:hidden absolute right-2 top-2 p-2 text-gray-300 hover:text-white transition-colors"
       >
         <X className="w-5 h-5" />
       </button>

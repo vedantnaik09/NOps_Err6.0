@@ -61,7 +61,7 @@ function FeatureCard({ icon: Icon, title, description }: Feature) {
 
 export function Features() {
   return (
-    <section className="relative py-20 bg-gray-50/50 dark:bg-gray-900/50">
+    <section className="relative py-20 bg-black/[0.85]">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
