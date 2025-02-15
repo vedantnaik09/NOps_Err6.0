@@ -53,7 +53,8 @@ export function SignUpForm() {
   
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('userType', "client");
+        localStorage.setItem('userType', data.user.user_type);
+        localStorage.setItem('userData', JSON.stringify(data.user));
         push('/dashboard');
       } else {
         setError(data.message || 'Registration failed');

@@ -38,6 +38,7 @@
 
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
+from typing import Optional
 import tempfile
 import os
 from typing import List
@@ -49,7 +50,7 @@ router = APIRouter()
 async def process_pdfs_endpoint(
     files: List[UploadFile] = File(...),
     user_id: str = Form(...),
-    conversation_id: str = Form(...)
+    conversation_id: Optional[str] = Form(None)
 ):
     """Endpoint for processing multiple PDF files"""
     try:
@@ -74,7 +75,7 @@ async def process_pdfs_endpoint(
 async def query_endpoint(
     query: str = Form(...),
     user_id: str = Form(...),
-    conversation_id: str = Form(...)
+    conversation_id: Optional[str] = Form(None)
 ):
     """Endpoint for querying processed documents"""
     try:
