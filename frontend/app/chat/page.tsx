@@ -110,25 +110,6 @@ const ChatbotPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Function to format message content.
-  const formatMessage = (text: string) => {
-    const escapeHtml = (unsafe: string) =>
-      unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    let formattedText = escapeHtml(text);
-    formattedText = formattedText.replace(/\\boxed{(.*?)}/g, '<span class="boxed">$1</span>');
-    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    formattedText = formattedText.replace(/\*(.*?)\*/g, "<em>$1</em>");
-    formattedText = formattedText
-      .split("\n")
-      .map((line) => {
-        if (line.trim().startsWith("-")) {
-          return `<li>${line.trim().substring(1).trim()}</li>`;
-        }
-        return line;
-      })
-      .join("<br/>");
-    return formattedText;
-  };
 
   // Function to send a message.
   const sendMessage = async () => {

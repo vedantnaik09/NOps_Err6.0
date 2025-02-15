@@ -16,27 +16,30 @@ interface SidebarProps {
   refreshChatHistory: boolean;
 }
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  return match ? match[2] : null;
-}
-
 const Sidebar: React.FC<SidebarProps> = ({ userId, isOpen, onClose, onSelectChat, onNewChat, refreshChatHistory }) => {
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   interface AuthObject {
-    user: {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-    };
-    accessToken: string;
-    refreshToken: string;
-    isAuthenticated: boolean;
-    error: string | null;
+    address: string;
+  email: string;
+  id: string;
+  name: string;
+  phoneNumber: string;
+  user_type: string;
   }
   const [authObject, setAuthObject] = useState<AuthObject | null>(null);
 
+    useEffect(() => {
+      const userDataString = localStorage.getItem('userData');
+      if (userDataString) {
+        try {
+          const userData = JSON.parse(userDataString);
+          console.log("userData", userData); 
+          setAuthObject(userData);
+        } catch (error) {
+          console.error("Error parsing user data from localStorage:", error);
+        }
+      }
+    }, []);
 
   useEffect(() => {
     console.log("userId", userId);
@@ -80,8 +83,8 @@ const Sidebar: React.FC<SidebarProps> = ({ userId, isOpen, onClose, onSelectChat
             <UserIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-medium text-white">{authObject?.user.username}</h3>
-            <p className="text-sm text-gray-400">{authObject?.user.email}</p>
+            <h3 className="font-medium text-white">{authObject?.name}</h3>
+            <p className="text-sm text-gray-400">{authObject?.email}</p>
           </div>
         </div>
       </div>
