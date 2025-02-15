@@ -4,6 +4,12 @@ import { Hero } from "@/components/sections/hero";
 import { Features } from "@/components/sections/features";
 import { CTA } from "@/components/sections/cta";
 
+declare global {
+  interface Window {
+    vis: any;
+  }
+}
+
 export default function Home() {
   return (
     <main className="relative min-h-screen bg-white dark:bg-gray-950">

@@ -11,6 +11,8 @@ from Functions.knowledge_graph import process_pdfs, process_text
 from bson import ObjectId
 from security import get_current_user
 from typing import Annotated 
+from fastapi.responses import HTMLResponse
+from database import knowledge_graph_html_collection 
 
 router = APIRouter()
 
@@ -193,3 +195,20 @@ async def get_chat_details(conversation_id: str):
     
     except Exception as e:
         raise HTTPException(500, f"Failed to fetch chat: {str(e)}")
+
+@router.get("/knowledge-graph/{conversation_id}", response_class=HTMLResponse)
+async def get_knowledge_graph_html(conversation_id: str):
+    print(conversation_id)
+    try:
+        # Fetch the HTML content from MongoDB
+        html_document = await knowledge_graph_html_collection.find_one(
+            {"conversation_id": conversation_id}
+        )
+        if not html_document:
+            raise HTTPException(status_code=404, detail="Knowledge graph HTML not found")
+
+        # Return the HTML content
+        return HTMLResponse(content=html_document["html_content"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch knowledge graph HTML: {str(e)}")
