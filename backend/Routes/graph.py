@@ -1,85 +1,140 @@
-# from fastapi import FastAPI, File, UploadFile, Form, APIRouter
-# from fastapi.responses import JSONResponse
-# import tempfile
-
-# import os
-# from Functions.knowledge_graph import process_pdf,process_text
-# router = APIRouter()
-
-# @router.post("/process_pdf/")
-# async def process_pdf_route(
-#     file: UploadFile = File(...),
-#     user_id: str = Form(...),
-#     conversation_id: str = Form(...)
-# ):
-#     """
-#     Endpoint to process a PDF file and return the knowledge graph HTML.
-#     It also accepts a user_id and conversation_id to create a unique storage folder.
-#     """
-#     with tempfile.TemporaryDirectory() as temp_dir:
-#         file_path = os.path.join(temp_dir, file.filename)
-#         with open(file_path, "wb") as f:
-#             f.write(file.file.read())
-#         html_str = process_pdf(temp_dir, user_id, conversation_id)
-#         return JSONResponse(content={"html": html_str})
-    
-# @router.post("/process_text/")
-# async def process_text_route(
-#     text: str = Form(...),
-#     user_id: str = Form(...),
-#     conversation_id: str = Form(...)
-# ):
-#     """
-#     Endpoint to process text input using the knowledge graph index from the specified user/conversation folder.
-#     """
-#     response = process_text(text, user_id, conversation_id)
-#     return JSONResponse(content={"response": str(response)})
-
-
+# graph.py
+from datetime import datetime
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, List
 import tempfile
 import os
-from typing import List
+from database import conversations_collection
 from Functions.knowledge_graph import process_pdfs, process_text
+from bson import ObjectId
 
 router = APIRouter()
 
+async def create_conversation(user_id: str, initial_message: dict):
+    conversation = {
+        "user_id": user_id,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "pdf_files": [],
+        "messages": [initial_message]
+    }
+    result = await conversations_collection.insert_one(conversation)
+    return str(result.inserted_id)
+
+async def update_conversation(conversation_id: str, message: dict, pdf_files: List[str] = None):
+    update_data = {
+        "$set": {"updated_at": datetime.utcnow()},
+        "$push": {"messages": message}
+    }
+    
+    if pdf_files:
+        update_data["$push"]["pdf_files"] = {"$each": pdf_files}
+    
+    await conversations_collection.update_one(
+        {"_id": ObjectId(conversation_id)},
+        update_data
+    )
+
+# Updated /process-pdfs endpoint
 @router.post("/process-pdfs")
 async def process_pdfs_endpoint(
     files: List[UploadFile] = File(...),
     user_id: str = Form(...),
     conversation_id: Optional[str] = Form(None)
 ):
-    """Endpoint for processing multiple PDF files"""
     try:
+        pdf_filenames = [file.filename for file in files]
+        
+        # Create conversation first if doesn't exist
+        if not conversation_id:
+            conversation_id = await create_conversation(
+                user_id=user_id,
+                initial_message={
+                    "content": "PDF processing started",
+                    "role": "system",
+                    "timestamp": datetime.utcnow()
+                }
+            )
+
+        # Now process PDFs with valid conversation_id
         with tempfile.TemporaryDirectory() as temp_dir:
             pdf_paths = []
             for file in files:
-                if not file.filename.lower().endswith('.pdf'):
-                    raise HTTPException(400, "Only PDF files are allowed")
-                
                 file_path = os.path.join(temp_dir, file.filename)
                 with open(file_path, "wb") as f:
                     f.write(await file.read())
                 pdf_paths.append(file_path)
             
-            html = process_pdfs(pdf_paths, user_id, conversation_id)
-            return JSONResponse(content={"html": html})
-    
+            result = process_pdfs(pdf_paths, user_id, conversation_id)  # Now has valid ID
+
+        # Update conversation with PDF files and final message
+        await conversations_collection.update_one(
+            {"_id": ObjectId(conversation_id)},
+            {"$set": {
+                "pdf_files": pdf_filenames,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        await update_conversation(
+            conversation_id=conversation_id,
+            message={
+                "content": result["message"],
+                "role": "system",
+                "timestamp": datetime.utcnow()
+            }
+        )
+
+        return JSONResponse(content={
+            "status": "success",
+            "message": result["message"],
+            "conversation_id": conversation_id,
+            "html": result["html"]
+        })
+
     except Exception as e:
         raise HTTPException(500, f"Processing failed: {str(e)}")
-
+    
 @router.post("/query")
 async def query_endpoint(
-    query: str = Form(...),
+    query: str = Form(..., min_length=1),
     user_id: str = Form(...),
     conversation_id: Optional[str] = Form(None)
 ):
-    """Endpoint for querying processed documents"""
     try:
+        # Process query (your existing code)
         response = process_text(query, user_id, conversation_id)
-        return JSONResponse(content={"response": response})
+        
+        # Create message objects
+        user_message = {
+            "content": query,
+            "role": "user",
+            "timestamp": datetime.utcnow()
+        }
+        
+        bot_message = {
+            "content": response,
+            "role": "assistant",
+            "timestamp": datetime.utcnow()
+        }
+
+        # Database operations
+        if not conversation_id:
+            # Create new conversation
+            conversation_id = await create_conversation(
+                user_id=user_id,
+                initial_message=user_message
+            )
+            await update_conversation(conversation_id, bot_message)
+        else:
+            # Update existing conversation
+            await update_conversation(conversation_id, user_message)
+            await update_conversation(conversation_id, bot_message)
+
+        return JSONResponse(content={
+            "response": response,
+            "conversation_id": conversation_id
+        })
+
     except Exception as e:
         raise HTTPException(500, f"Query failed: {str(e)}")
