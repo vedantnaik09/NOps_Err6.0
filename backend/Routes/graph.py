@@ -17,6 +17,7 @@ async def process_pdf_route(file: UploadFile = File(...)):
             f.write(file.file.read())
         html_str, response = process_pdf(temp_dir)
         return JSONResponse(content={"html": html_str, "response": str(response)})
+    
 @router.post("/process_text/")
 async def process_text_route(text: str = Form(...)):
     """

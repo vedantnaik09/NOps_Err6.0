@@ -25,7 +25,8 @@ Settings.chunk_size = 512
 
 # Declare the global index variable
 index = None  # Initially, set to None
-
+# Define the directory where the index will be stored
+PERSIST_DIR = "./storage"
 def process_pdf(pdf_path: str):
     """
     Process a PDF file to generate a knowledge graph and query response.
@@ -42,6 +43,7 @@ def process_pdf(pdf_path: str):
         max_triplets_per_chunk=5,
         storage_context=storage_context,
     )
+    index.storage_context.persist(persist_dir=PERSIST_DIR)
     
     query_engine = index.as_query_engine(
         include_text=False, response_mode="tree_summarize"
@@ -55,15 +57,23 @@ def process_pdf(pdf_path: str):
     html_str = net.generate_html()
     
     return html_str, response
-
-def process_text(text: str):
+def load_index_from_storage():
+    """
+    Load the index from local storage.
+    """
     global index
+    storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
+    
+    index = KnowledgeGraphIndex.load_from_storage(storage_context=storage_context)
+    return index
+def process_text(text: str):
+    index=load_index_from_storage()
     if index is None:
         return "Error: The index has not been initialized. Please upload a PDF first."
     
     query_engine = index.as_query_engine(
         include_text=False, response_mode="tree_summarize"
     )
-    response = query_engine.query(text)  # Optionally use the provided text here
+    response = query_engine.query(text)  
     
     return response

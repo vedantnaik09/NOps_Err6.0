@@ -5,3 +5,8 @@ python-dotenv
 passlib[bcrypt]  
 PyJWT
 pydantic[email]
+llama-index
+llama-index-core
+llama-index-embeddings-gemini
+llama-index-llms-gemini
+pydf2
