@@ -1,6 +1,7 @@
 # graph.py
 from datetime import datetime
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException
+from security import get_current_user
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 import tempfile
@@ -8,6 +9,8 @@ import os
 from database import conversations_collection
 from Functions.knowledge_graph import process_pdfs, process_text
 from bson import ObjectId
+from security import get_current_user
+from typing import Annotated 
 
 router = APIRouter()
 
@@ -138,3 +141,55 @@ async def query_endpoint(
 
     except Exception as e:
         raise HTTPException(500, f"Query failed: {str(e)}")
+    
+    # Add to graph.py
+@router.get("/chats")
+async def get_user_chats(user_id: Annotated[str, Depends(get_current_user)]):
+    print(user_id)
+    try:
+        conversations = []
+        async for conv in conversations_collection.find({"user_id": user_id}):
+            # Create title from PDF filenames
+            title = "New Chat"
+            if conv.get("pdf_files"):
+                title = ", ".join([os.path.splitext(f)[0] for f in conv["pdf_files"]][:3])
+                if len(conv["pdf_files"]) > 3:
+                    title += "..."
+
+            conversations.append({
+                "id": str(conv["_id"]),
+                "title": title,
+                "date": conv["created_at"].strftime("%d %b %Y")
+            })
+        
+        return JSONResponse(content={"data": conversations})
+    
+    except Exception as e:
+        raise HTTPException(500, f"Failed to fetch chats: {str(e)}")
+    
+# Add to graph.py
+@router.get("/chat/{conversation_id}")
+async def get_chat_details(conversation_id: str):
+    try:
+        conv = await conversations_collection.find_one({"_id": ObjectId(conversation_id)})
+        if not conv:
+            raise HTTPException(404, "Conversation not found")
+
+        # Convert datetime objects to ISO strings
+        processed_messages = []
+        for msg in conv.get("messages", []):
+            message = msg.copy()
+            if "timestamp" in message:
+                message["timestamp"] = message["timestamp"].isoformat()
+            processed_messages.append(message)
+
+        return JSONResponse(content={
+            "messages": processed_messages,
+            "pdf_files": conv.get("pdf_files", []),
+            # Include other fields if needed with proper serialization
+            "created_at": conv.get("created_at").isoformat() if conv.get("created_at") else None,
+            "updated_at": conv.get("updated_at").isoformat() if conv.get("updated_at") else None
+        })
+    
+    except Exception as e:
+        raise HTTPException(500, f"Failed to fetch chat: {str(e)}")

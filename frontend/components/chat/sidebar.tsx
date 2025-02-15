@@ -1,14 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  History, 
-  Settings, 
-  Sun,
-  LogOut,
-  MessageSquare,
-  User as UserIcon,
-  X,
-  Plus
-} from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { History, Settings, Sun, LogOut, MessageSquare, User as UserIcon, X, Plus } from "lucide-react";
 
 interface ChatHistoryItem {
   id: string;
@@ -17,6 +8,7 @@ interface ChatHistoryItem {
 }
 
 interface SidebarProps {
+  userId: string;
   isOpen: boolean;
   onClose: () => void;
   onSelectChat?: (chatId: string) => void;
@@ -24,73 +16,64 @@ interface SidebarProps {
   refreshChatHistory: boolean;
 }
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? match[2] : null;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSelectChat, onNewChat, refreshChatHistory }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userId, isOpen, onClose, onSelectChat, onNewChat, refreshChatHistory }) => {
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
   interface AuthObject {
-    user: {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-    };
-    accessToken: string;
-    refreshToken: string;
-    isAuthenticated: boolean;
-    error: string | null;
+    address: string;
+  email: string;
+  id: string;
+  name: string;
+  phoneNumber: string;
+  user_type: string;
   }
   const [authObject, setAuthObject] = useState<AuthObject | null>(null);
 
-  useEffect(() => {
-    const persistRoot = localStorage.getItem("persist:root");
-    if (persistRoot) {
-      try {
-        const parsedRoot = JSON.parse(persistRoot);
-        const parsedRootAuth = JSON.parse(parsedRoot.auth);
-        if (parsedRootAuth.user) {
-          setUserId(parsedRootAuth.user.id);
-          setAuthObject(parsedRootAuth);
+    useEffect(() => {
+      const userDataString = localStorage.getItem('userData');
+      if (userDataString) {
+        try {
+          const userData = JSON.parse(userDataString);
+          console.log("userData", userData); 
+          setAuthObject(userData);
+        } catch (error) {
+          console.error("Error parsing user data from localStorage:", error);
         }
-      } catch (error) {
-        console.error("Error parsing persist:root", error);
       }
-    }
-  }, []);
+    }, []);
 
   useEffect(() => {
+    console.log("userId", userId);
     if (userId) {
-      const accessToken = getCookie("accessToken");
-      fetch(`http://localhost:5000/api/users/chats`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken || ''}`
-        },
-        credentials: 'include'
-      })
-        .then((res) => res.json())
-        .then((data) => {
+      const fetchChats = async () => {
+        try {
+          const accessToken = localStorage.getItem("token");
+          const response = await fetch(`http://localhost:8000/api/users/chats`, {
+            headers: {
+              Authorization: `Bearer ${accessToken || ""}`,
+            },
+            credentials: "include",
+          });
+
+          if (!response.ok) throw new Error("Failed to fetch chats");
+
+          const data = await response.json();
           setChatHistory(data.data || []);
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("Error fetching chat history:", err);
-        });
+        }
+      };
+
+      fetchChats();
     }
   }, [userId, refreshChatHistory]);
 
   return (
-    <div 
+    <div
       className={`top-0 left-0 min-h-screen max-h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+        isOpen ? "translate-x-0" : "-translate-x-full"
       } z-50`}
     >
-      <button 
-        onClick={onClose}
-        className="md:hidden absolute right-2 top-2 p-2 text-gray-300 hover:text-white transition-colors"
-      >
+      <button onClick={onClose} className="md:hidden absolute right-2 top-2 p-2 text-gray-300 hover:text-white transition-colors">
         <X className="w-5 h-5" />
       </button>
 
@@ -100,8 +83,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSelectChat, onNewC
             <UserIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-medium text-white">{authObject?.user.username}</h3>
-            <p className="text-sm text-gray-400">{authObject?.user.email}</p>
+            <h3 className="font-medium text-white">{authObject?.name}</h3>
+            <p className="text-sm text-gray-400">{authObject?.email}</p>
           </div>
         </div>
       </div>
@@ -121,12 +104,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSelectChat, onNewC
             chatHistory.map((chat) => (
               <button
                 key={chat.id}
-                onClick={() => onSelectChat && onSelectChat(chat.id)}
+                onClick={() => {
+                  onSelectChat && onSelectChat(chat.id);
+                }}
                 className="w-full text-left p-2 rounded-lg hover:bg-gray-700 transition-colors group flex items-center"
               >
                 <MessageSquare className="w-4 h-4 text-gray-400 mr-2" />
                 <div className="flex-1 truncate">
-                  <p className="text-sm text-white">{chat.title}</p>
+                  <p className="text-sm text-white truncate">{chat.title}</p>
                   <p className="text-xs text-gray-400">{chat.date}</p>
                 </div>
               </button>
