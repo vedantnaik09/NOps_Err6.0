@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-from Routes import user_routes,graph
+from Routes import user_routes,graph,anomaly
 
 load_dotenv()
 
@@ -30,6 +30,8 @@ app.add_middleware(
 # Include your user routes
 app.include_router(user_routes.router, prefix="/api/users")
 app.include_router(graph.router, prefix="/api/users")
+app.include_router(anomaly.router, prefix="/api/anomaly")
+
 
 if __name__ == "__main__":
     import uvicorn
