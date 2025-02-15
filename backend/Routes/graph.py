@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 import tempfile
 
 import os
-from Functions.knowledeg_graph import process_pdf,process_text
+from Functions.knowledege_graph import process_pdf,process_text
 router = APIRouter()
 
 @router.post("/process_pdf/")

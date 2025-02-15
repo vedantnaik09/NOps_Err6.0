@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Send, Bot, Loader2, ArrowLeft, Mic, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Send, Bot, Loader2, ArrowLeft, Mic, ChevronDown, ChevronRight, X, FileUp } from "lucide-react";
 import Sidebar from "@/components/chat/sidebar";
 import Link from "next/link";
 import VoiceModal from '@/components/chat/VoiceModal';
@@ -27,6 +27,7 @@ const ChatbotPage = () => {
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Speech function using the browser API.
   const speak = (text: string) => {
@@ -331,6 +332,48 @@ const ChatbotPage = () => {
     setVoiceTranscript(null);
   };
 
+  // Function to handle file upload
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+    setIsLoading(true);
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/users/process_pdf/`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process PDF");
+      }
+
+      const data = await response.json();
+      
+      // Store the response in localStorage
+      localStorage.setItem("knowledgeGraphData", JSON.stringify(data));
+
+      // Add a message to show the PDF was processed
+      setMessages(prev => [...prev, {
+        role: "bot",
+        text: "PDF processed successfully! You can now ask questions about its content.",
+        data: data
+      }]);
+
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      setMessages(prev => [...prev, {
+        role: "bot",
+        text: "An error occurred while processing the PDF file."
+      }]);
+    } finally {
+      setIsLoading(false);
+      setSelectedFile(null);
+    }
+  };
+
   return (
     <div className="flex">
       <Sidebar
@@ -475,6 +518,28 @@ const ChatbotPage = () => {
               </button>
             )}
           </div>
+          <input
+            type="file"
+            id="file-upload"
+            className="hidden"
+            accept=".pdf"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+          />
+          <label
+            htmlFor="file-upload"
+            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors cursor-pointer"
+          >
+            <FileUp className="w-5 h-5" />
+          </label>
+          {selectedFile && (
+            <button
+              onClick={handleFileUpload}
+              className="ml-2 p-3 rounded-full bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 transition-colors"
+              disabled={isLoading}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          )}
           <button
             onClick={sendMessage}
             className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
