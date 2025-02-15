@@ -7,6 +7,8 @@ from llama_index.core import Settings
 from llama_index.embeddings.gemini import GeminiEmbedding
 from llama_index.core import StorageContext, load_index_from_storage
 from pyvis.network import Network
+from database import knowledge_graph_html_collection 
+from datetime import datetime
 
 # Initialize LLM and Embedding Model
 llm = Gemini(temperature=0, model="models/gemini-2.0-flash")
@@ -36,6 +38,15 @@ def process_pdfs(pdf_paths: List[str], user_id: str, conversation_id: str) -> di
     net.from_nx(kg_index.get_networkx_graph())
     html_str = net.generate_html()
 
+    # Store the HTML in MongoDB
+    html_document = {
+        "user_id": user_id,
+        "conversation_id": conversation_id,
+        "html_content": html_str,
+        "created_at": datetime.utcnow()
+    }
+    knowledge_graph_html_collection.insert_one(html_document)
+
     # Vector Index for RAG
     vector_storage = StorageContext.from_defaults()
     VectorStoreIndex.from_documents(documents, storage_context=vector_storage)
@@ -47,7 +58,6 @@ def process_pdfs(pdf_paths: List[str], user_id: str, conversation_id: str) -> di
         "message": f"Successfully processed {len(pdf_paths)} PDF(s). You can now ask questions about their content.",
         "html": html_str  # This will be stored but not displayed
     }
-
 def process_text(query: str, user_id: str, conversation_id: str) -> str:
     """Query the merged RAG index"""
     persist_dir = os.path.join("./storage", f"{user_id}_{conversation_id}")

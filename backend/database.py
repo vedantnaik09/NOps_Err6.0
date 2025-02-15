@@ -12,3 +12,4 @@ client = AsyncIOMotorClient(MONGO_URI)
 db = client[DB_NAME]
 
 conversations_collection = db["conversations"]
+knowledge_graph_html_collection = db["knowledge_graph_html"]
