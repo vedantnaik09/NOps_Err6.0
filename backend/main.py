@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from Routes import user_routes,graph
+from Routes import user_routes,graph,anomaly
 
 load_dotenv()
 
@@ -24,6 +24,8 @@ app.add_middleware(
 # Include your user routes
 app.include_router(user_routes.router, prefix="/api/users")
 app.include_router(graph.router, prefix="/api/users")
+app.include_router(anomaly.router, prefix="/api/anomaly")
+
 
 if __name__ == "__main__":
     import uvicorn
