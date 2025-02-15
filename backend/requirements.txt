@@ -17,3 +17,4 @@ pymongo
 google-generativeai
 PyMuPDF
 python-jose
+google-genai
