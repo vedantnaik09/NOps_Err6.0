@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from llama_index.core import SimpleDirectoryReader, KnowledgeGraphIndex
+from llama_index.core import SimpleDirectoryReader, KnowledgeGraphIndex, VectorStoreIndex
 from llama_index.core.graph_stores import SimpleGraphStore
 from llama_index.llms.gemini import Gemini
 from llama_index.core import Settings
@@ -22,54 +22,56 @@ Settings.chunk_size = 512
 
 def process_pdf(pdf_path: str, user_id: str, conversation_id: str):
     """
-    Process a PDF file to generate a knowledge graph and persist the index 
-    in a unique folder based on user_id and conversation_id.
+    Process a PDF file to generate a knowledge graph (for visualization) 
+    and a vector index (for RAG), persisting both in a unique folder.
     """
-    # Create a unique folder for this user and conversation
+    # Create unique storage directory
     persist_dir = os.path.join("./storage", f"{user_id}_{conversation_id}")
     os.makedirs(persist_dir, exist_ok=True)
 
-    # Load documents from the provided PDF path
+    # Load documents once
     documents = SimpleDirectoryReader(pdf_path).load_data()
-    graph_store = SimpleGraphStore()
-    storage_context = StorageContext.from_defaults(graph_store=graph_store)
 
-    # Build the index from documents and persist it to the unique folder
-    index = KnowledgeGraphIndex.from_documents(
+    # 1. Create Knowledge Graph Index for visualization
+    graph_storage = StorageContext.from_defaults(graph_store=SimpleGraphStore())
+    kg_index = KnowledgeGraphIndex.from_documents(
         documents,
         max_triplets_per_chunk=1,
-        storage_context=storage_context,
+        storage_context=graph_storage,
     )
-    index.storage_context.persist(persist_dir=persist_dir)
-
-    # Generate a network visualization of the knowledge graph
-    g = index.get_networkx_graph()
+    
+    # Generate visualization HTML
+    g = kg_index.get_networkx_graph()
     net = Network(notebook=True, cdn_resources="in_line", directed=True)
     net.from_nx(g)
     html_str = net.generate_html()
 
+    # 2. Create Vector Store Index for RAG
+    vector_storage = StorageContext.from_defaults()
+    VectorStoreIndex.from_documents(
+        documents,
+        storage_context=vector_storage
+    )
+    vector_storage.persist(persist_dir=persist_dir)
+
     return html_str
 
-def load_index_from_storage_1(user_id: str, conversation_id: str):
+def load_rag_index(user_id: str, conversation_id: str):
     """
-    Load the index from local storage for the given user and conversation.
+    Load the vector store index for RAG queries
     """
     persist_dir = os.path.join("./storage", f"{user_id}_{conversation_id}")
     storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
-    index = load_index_from_storage(storage_context=storage_context)
-    return index
+    return load_index_from_storage(storage_context)
 
-def process_text(text: str, user_id: str, conversation_id: str):
+def process_text(query: str, user_id: str, conversation_id: str):
     """
-    Query the knowledge graph index loaded from the user/conversation-specific folder.
+    Process queries using the standard RAG pipeline with vector index
     """
-    index = load_index_from_storage_1(user_id, conversation_id)
-    if index is None:
-        return "Error: The index has not been initialized. Please upload a PDF first."
-    print(index)
-    query_engine = index.as_query_engine(
-        include_text=False, response_mode="tree_summarize"
-    )
-    response = query_engine.query(text)
-    #python -m uvicorn main:app --reload
-    return response
+    index = load_rag_index(user_id, conversation_id)
+    if not index:
+        return "Error: Index not found. Upload PDF first."
+    
+    query_engine = index.as_query_engine()
+    response = query_engine.query(query)
+    return response.response
