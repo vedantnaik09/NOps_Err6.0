@@ -266,32 +266,39 @@ const ChatbotPage = () => {
     setIsPdfUploaded(false);
   };
 
-  // Function to load a conversation by its ID.
-  const loadConversation = async (convId: string) => {
+// Update the loadConversation function in ChatbotPage
+const loadConversation = async (convId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/api/users/chat/${convId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:8000/api/users/chat/${convId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) throw new Error("Failed to load conversation");
+        
+        const data = await response.json();
+        if (data && data.messages) {
+            setMessages(
+                data.messages.map((msg: any) => ({
+                    role: msg.role === "assistant" ? "bot" : "user",
+                    text: msg.content,
+                    timestamp: msg.timestamp
+                }))
+            );
+            setConversationId(convId);
+            
+            // Load any associated PDF files
+            if (data.pdf_files && data.pdf_files.length > 0) {
+                setIsPdfUploaded(true);
+                setAttachedFileNames(data.pdf_files);
+            }
         }
-      });
-      if (!response.ok) {
-        throw new Error("Failed to load conversation");
-      }
-      const data = await response.json();
-      if (data && data.data && data.data.messages) {
-        setMessages(
-          data.data.messages.map((msg: any) => ({
-            role: msg.sender === "agent" ? "bot" : msg.sender,
-            text: msg.message,
-          }))
-        );
-        setConversationId(convId);
-      }
     } catch (error) {
-      console.error("Error loading conversation:", error);
+        console.error("Error loading conversation:", error);
     }
-  };
+};
 
   // Callback for selecting a chat from the sidebar.
   const handleSelectChat = async (convId: string) => {
@@ -415,6 +422,7 @@ const ChatbotPage = () => {
   return (
     <div className="flex">
       <Sidebar
+        userId={userId || ""}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onSelectChat={handleSelectChat}
