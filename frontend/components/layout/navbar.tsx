@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, LogIn, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface User {
   name?: string;
@@ -16,6 +16,7 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const router = useRouter();
+  const currentPath = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,90 +54,29 @@ export function Navbar() {
     router.push('/');
   };
 
+  if (currentPath === "/chat") {
+    return null; // Don't render the navbar if the path is "/auth"
+  }
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? "bg-white/80 dark:bg-gray-950/80 backdrop-blur-md shadow-md" : "bg-transparent"
-    }`}>
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
-          <div className="flex-1">
-            <Link href="/" className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              RESOLVR
-            </Link>
-          </div>
-
-          <div className="flex-1 hidden md:flex items-center justify-center gap-8">
-            {user ? (
-              <>
-                {localStorage.getItem('userType') === 'client' ? (
-                  <>
-                    <Link href="/submitComplaint" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                      Submit Complaint
-                    </Link>
-                    <Link href="/rewards" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                      Rewards
-                    </Link>
-                    <Link href="/dashboard" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                      Dashboard
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/viewComplaint" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                      View Complaint
-                    </Link>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <Link href="/features" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                  Features
-                </Link>
-                <Link href="/about" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                  About
-                </Link>
-              </>
-            )}
-          </div>
-
-          <div className="flex-1 flex items-center justify-end gap-4">
-            <Button variant="ghost" size="sm" className="hidden md:flex">
-              <Phone className="mr-2 h-4 w-4" />
-              <Link href={'/contact'} className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</Link>
-            </Button>
-            {user ? (
-              <div className="relative">
-                <button 
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 flex items-center rounded-lg py-2 px-4 ${dropdownOpen?'rounded-b-none':''}`}
-                >
-                  {user.name || 'User'}
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </button>
-                {dropdownOpen && (
-                  <div className="absolute right-0 border shadow-lg w-full py-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-b-sm font-bold">
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full px-2 py-2 text-sm text-center text-gray-200 hover:text-white"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link href="/auth">
-                <Button 
-                  size="sm"
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0"
-                >
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login
-                </Button>
-              </Link>
-            )}
-          </div>
+    <nav className="w-full fixed p-3 z-20">
+      <div className="flex justify-between items-center w-full ">
+        {/* Left: Logo */}
+        <Link href="/" className="flex items-center ml-3">
+          <h1 className="font-medium text-xl">Cognisight</h1>
+        </Link>
+        {/* Center: Navigation links */}
+        <div className="flex gap-8">
+          <a href="#" className="text-white/70 hover:text-white">Home</a>
+          <a href="#" className="text-white/70 hover:text-white">Services</a>
+          <a href="#" className="text-white/70 hover:text-white">Market</a>
+          <a href="#" className="text-white/70 hover:text-white">FAQs</a>
+        </div>
+        {/* Right: Account action */}
+        <div className="flex items-center mr-3">
+          <Link href="/auth" className="px-4 py-2 bg-[#7165E3] rounded-lg hover:bg-[#5B4ED1] text-white">
+            Create account
+          </Link>
         </div>
       </div>
     </nav>
