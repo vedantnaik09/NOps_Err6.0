@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Send, Bot, Loader2, ArrowLeft, Mic, ChevronDown, ChevronRight, X, FileUp } from "lucide-react";
 import Sidebar from "@/components/chat/sidebar";
 import Link from "next/link";
-import VoiceModal from '@/components/chat/VoiceModal';
+import VoiceModal from "@/components/chat/VoiceModal";
 
 // Helper function to get a cookie by name.
 function getCookie(name: string): string | null {
@@ -15,9 +15,7 @@ const ChatbotPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [messages, setMessages] = useState<
     { role: string; text: string; queryType?: string; data?: any; generatedQueries?: any; taskExecution?: any; pinecone?: any }[]
-  >([
-    { role: "bot", text: "Hello! How can I assist you today?" },
-  ]);
+  >([{ role: "bot", text: "Hello! How can I assist you today?" }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -28,27 +26,28 @@ const ChatbotPage = () => {
   const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
 
   // Speech function using the browser API.
   const speak = (text: string) => {
     console.log(`Speaking: ${text}`);
     setIsSpeaking(true);
-    
+
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
-    
+
     // Clean the text from HTML and special characters.
     const cleanText = text
-      .replace(/<[^>]*>/g, '')
-      .replace(/[`~@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .replace(/(\d+)/g, (match) => match.split('').join(' '))
+      .replace(/<[^>]*>/g, "")
+      .replace(/[`~@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, " ")
+      .replace(/\s+/g, " ")
+      .replace(/(\d+)/g, (match) => match.split("").join(" "))
       .trim();
-    
+
     // Split into sentences.
     const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
     let currentIndex = 0;
-    
+
     const speakNextSentence = () => {
       if (currentIndex < sentences.length) {
         const utterance = new SpeechSynthesisUtterance(sentences[currentIndex].trim());
@@ -63,7 +62,7 @@ const ChatbotPage = () => {
           speakNextSentence();
         };
         utterance.onerror = (event) => {
-          console.error('Speech synthesis error:', event);
+          console.error("Speech synthesis error:", event);
           currentIndex++;
           if (currentIndex >= sentences.length) {
             setIsSpeaking(false);
@@ -73,9 +72,9 @@ const ChatbotPage = () => {
         window.speechSynthesis.speak(utterance);
       }
     };
-    
+
     speakNextSentence();
-    
+
     const maintainSpeech = setInterval(() => {
       if (window.speechSynthesis.speaking) {
         window.speechSynthesis.pause();
@@ -116,16 +115,11 @@ const ChatbotPage = () => {
   // Function to format message content.
   const formatMessage = (text: string) => {
     const escapeHtml = (unsafe: string) =>
-      unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     let formattedText = escapeHtml(text);
     formattedText = formattedText.replace(/\\boxed{(.*?)}/g, '<span class="boxed">$1</span>');
-    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    formattedText = formattedText.replace(/\*(.*?)\*/g, "<em>$1</em>");
     formattedText = formattedText
       .split("\n")
       .map((line) => {
@@ -145,14 +139,12 @@ const ChatbotPage = () => {
     const userInput = input;
     setInput("");
     setIsLoading(true);
-  
+
     const newMessages = [...messages, { role: "user", text: userInput }];
     setMessages(newMessages);
-  
-    const history = newMessages.map((msg) =>
-      msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`
-    );
-  
+
+    const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
+
     try {
       const response = await fetch("http://localhost:5000/api/users/prompt", {
         method: "POST",
@@ -161,21 +153,21 @@ const ChatbotPage = () => {
           userId,
           prompt: userInput,
           history: history,
-          conversationId
+          conversationId,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
-  
+
       const data = await response.json();
-  
+
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
         setRefreshChatHistory((prev) => !prev);
       }
-  
+
       const assistantMessage = {
         role: "bot",
         text: data.content,
@@ -183,17 +175,13 @@ const ChatbotPage = () => {
         data: data.data,
         generatedQueries: data.generatedQueries,
         taskExecution: data.taskExecution,
-        pinecone: data.pinecone
+        pinecone: data.pinecone,
       };
-  
+
       setMessages((prev) => [...prev, assistantMessage]);
-  
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", text: "An error occurred while processing your message." },
-      ]);
+      setMessages((prev) => [...prev, { role: "bot", text: "An error occurred while processing your message." }]);
     } finally {
       setIsLoading(false);
     }
@@ -212,9 +200,7 @@ const ChatbotPage = () => {
     const newMessages = [...messages, { role: "user", text: transcript }];
     setMessages(newMessages);
 
-    const history = newMessages.map((msg) =>
-      msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`
-    );
+    const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
 
     try {
       const response = await fetch("http://localhost:5000/api/users/prompt", {
@@ -224,7 +210,7 @@ const ChatbotPage = () => {
           userId,
           prompt: userInput,
           history: history,
-          conversationId
+          conversationId,
         }),
       });
 
@@ -246,7 +232,7 @@ const ChatbotPage = () => {
         data: data.data,
         generatedQueries: data.generatedQueries,
         taskExecution: data.taskExecution,
-        pinecone: data.pinecone
+        pinecone: data.pinecone,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -256,13 +242,9 @@ const ChatbotPage = () => {
         messageToSpeak = messageToSpeak.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
       }
       speak(messageToSpeak);
-
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", text: "An error occurred while processing your message." },
-      ]);
+      setMessages((prev) => [...prev, { role: "bot", text: "An error occurred while processing your message." }]);
     } finally {
       setIsLoading(false);
     }
@@ -281,7 +263,7 @@ const ChatbotPage = () => {
       const accessToken = getCookie("accessToken");
       const response = await fetch(`http://localhost:5000/api/users/chat/${convId}`, {
         headers: {
-          "Authorization": `Bearer ${accessToken || ""}`,
+          Authorization: `Bearer ${accessToken || ""}`,
         },
         credentials: "include",
       });
@@ -310,7 +292,7 @@ const ChatbotPage = () => {
   };
 
   const toggleMessageExpansion = (index: number) => {
-    setExpandedMessages(prev => {
+    setExpandedMessages((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
         newSet.delete(index);
@@ -351,26 +333,49 @@ const ChatbotPage = () => {
       }
 
       const data = await response.json();
-      
+
       // Store the response in localStorage
-      localStorage.setItem("knowledgeGraphData", JSON.stringify(data));
+      localStorage.setItem("knowledgeGraphData", data.html);
 
       // Add a message to show the PDF was processed
-      setMessages(prev => [...prev, {
-        role: "bot",
-        text: "PDF processed successfully! You can now ask questions about its content.",
-        data: data
-      }]);
-
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: "PDF processed successfully! You can now ask questions about its content.",
+          data: data,
+        },
+      ]);
     } catch (error) {
       console.error("Error processing PDF:", error);
-      setMessages(prev => [...prev, {
-        role: "bot",
-        text: "An error occurred while processing the PDF file."
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: "An error occurred while processing the PDF file.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
       setSelectedFile(null);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setAttachedFileName(file.name);
+      setInput(""); // Clear any text input when file is attached
+    }
+  };
+
+  const handleSend = async () => {
+    if (selectedFile) {
+      await handleFileUpload();
+      setAttachedFileName(null); // Clear the file name after upload
+    } else {
+      await sendMessage();
     }
   };
 
@@ -386,7 +391,9 @@ const ChatbotPage = () => {
 
       <div className="flex flex-col h-screen w-full bg-[#0A0A0F]">
         <header className="shadow-lg border border-b-2 p-6 text-center text-2xl font-bold text-white flex gap-2 items-center">
-          <Link href="/"><ArrowLeft /></Link>
+          <Link href="/">
+            <ArrowLeft />
+          </Link>
           <span>AI Chat Assistant</span>
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -407,26 +414,17 @@ const ChatbotPage = () => {
 
             return (
               <div key={index} className="space-y-2">
-                {thinkContent && (
-                  <div className="text-white/60 italic text-sm max-w-3xl">
-                    Thinking: {thinkContent}
-                  </div>
-                )}
+                {thinkContent && <div className="text-white/60 italic text-sm max-w-3xl">Thinking: {thinkContent}</div>}
                 <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
-                    msg.role === "user"
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
-                      : "bg-gray-800 text-white"
-                  }`}>
+                  <div
+                    className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
+                      msg.role === "user" ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white" : "bg-gray-800 text-white"
+                    }`}
+                  >
                     <div className="flex items-start space-x-3">
-                      {msg.role === "bot" && (
-                        <Bot className="w-6 h-6 mt-1 text-white/80" />
-                      )}
+                      {msg.role === "bot" && <Bot className="w-6 h-6 mt-1 text-white/80" />}
                       <div className="space-y-2 w-full">
-                        <div
-                          className="message-content"
-                          dangerouslySetInnerHTML={{ __html: formatMessage(messageText) }}
-                        />
+                        <div className="message-content" dangerouslySetInnerHTML={{ __html: formatMessage(messageText) }} />
                         {msg.queryType && (
                           <div className="mt-2 text-xs text-white/80 flex items-center justify-between">
                             <span>Source: {msg.queryType}</span>
@@ -436,7 +434,7 @@ const ChatbotPage = () => {
                                 className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
                               >
                                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                <span>{isExpanded ? 'Hide Details' : 'Show Details'}</span>
+                                <span>{isExpanded ? "Hide Details" : "Show Details"}</span>
                               </button>
                             )}
                           </div>
@@ -446,28 +444,24 @@ const ChatbotPage = () => {
                             {msg.data && (
                               <div className="text-xs">
                                 <div className="font-semibold text-white/80 mb-1">Results:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">
-                                  {JSON.stringify(msg.data, null, 2)}
-                                </pre>
+                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.data, null, 2)}</pre>
                               </div>
                             )}
                             {msg.generatedQueries && (
                               <div className="text-xs">
                                 <div className="font-semibold text-white/80 mb-1">Generated Queries:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">
-                                  {JSON.stringify(msg.generatedQueries, null, 2)}
-                                </pre>
+                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.generatedQueries, null, 2)}</pre>
                               </div>
                             )}
                             {msg.pinecone && (
                               <div className="text-xs">
-                                <div className="font-semibold text-white/80 mb-1">
-                                  Knowledge Base Results (Index: {msg.pinecone.index}):
-                                </div>
+                                <div className="font-semibold text-white/80 mb-1">Knowledge Base Results (Index: {msg.pinecone.index}):</div>
                                 <div className="bg-gray-800 p-2 rounded-md text-white">
                                   {msg.pinecone.matches.map((match: any, i: number) => (
                                     <div key={i} className="mb-2">
-                                      <div className="text-white/70">Match {i + 1} (Score: {match.score.toFixed(4)})</div>
+                                      <div className="text-white/70">
+                                        Match {i + 1} (Score: {match.score.toFixed(4)})
+                                      </div>
                                       <div className="text-white">{match.text}</div>
                                     </div>
                                   ))}
@@ -477,9 +471,7 @@ const ChatbotPage = () => {
                             {msg.taskExecution && (
                               <div className="text-xs">
                                 <div className="font-semibold text-white/80 mb-1">Task Execution Results:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">
-                                  {JSON.stringify(msg.taskExecution, null, 2)}
-                                </pre>
+                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.taskExecution, null, 2)}</pre>
                               </div>
                             )}
                           </div>
@@ -499,58 +491,45 @@ const ChatbotPage = () => {
           <div ref={messagesEndRef} />
         </div>
         <div className="bg-gray-900 p-4 flex items-center border-t border-gray-700">
-          <div className="flex-1 relative">
+          <div className="flex-1 relative flex items-center">
+            <label htmlFor="file-upload" className="p-3 text-white/80 hover:text-white cursor-pointer" title="Attach PDF">
+              <FileUp className="w-5 h-5" />
+            </label>
+            <input type="file" id="file-upload" className="hidden" accept=".pdf" onChange={handleFileSelect} />
             <input
               type="text"
               className="w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
-              placeholder="Type your message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder={attachedFileName || "Type your message..."}
+              value={attachedFileName ? "" : input}
+              onChange={(e) => !selectedFile && setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              disabled={!!selectedFile}
             />
-            {voiceTranscript && (
+            {(voiceTranscript || attachedFileName) && (
               <button
-                onClick={handleDiscardInput}
+                onClick={() => {
+                  handleDiscardInput();
+                  setSelectedFile(null);
+                  setAttachedFileName(null);
+                }}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-white/80 hover:text-red-500"
-                title="Discard voice input"
+                title="Clear input"
               >
                 <X className="h-5 w-5" />
               </button>
             )}
           </div>
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            accept=".pdf"
-            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-          />
-          <label
-            htmlFor="file-upload"
-            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors cursor-pointer"
-          >
-            <FileUp className="w-5 h-5" />
-          </label>
-          {selectedFile && (
-            <button
-              onClick={handleFileUpload}
-              className="ml-2 p-3 rounded-full bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 transition-colors"
-              disabled={isLoading}
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          )}
           <button
-            onClick={sendMessage}
+            onClick={handleSend}
             className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
-            disabled={isLoading}
+            disabled={isLoading || (!input.trim() && !selectedFile)}
           >
             <Send className="w-5 h-5" />
           </button>
           <button
             onClick={() => setIsVoiceModalOpen(true)}
             className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
-            disabled={isLoading}
+            disabled={isLoading || !!selectedFile}
           >
             <Mic className="w-5 h-5" />
           </button>
@@ -560,7 +539,7 @@ const ChatbotPage = () => {
           onClose={() => setIsVoiceModalOpen(false)}
           onTranscription={handleVoiceInput}
           isSpeaking={isSpeaking}
-          onDiscard={handleDiscardVoiceMessage} 
+          onDiscard={handleDiscardVoiceMessage}
         />
       </div>
     </div>
