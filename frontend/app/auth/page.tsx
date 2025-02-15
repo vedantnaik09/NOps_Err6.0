@@ -2,25 +2,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/firebase/config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/login-form";
 import { SignUpForm } from "@/components/auth/signup-form";
 
 export default function AuthPage() {
-  const { push } = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        push("/dashboard");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [push]);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50/50 dark:bg-gray-950/50">
       <div className="relative">

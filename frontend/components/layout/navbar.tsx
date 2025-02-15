@@ -63,14 +63,14 @@ export function Navbar() {
       <div className="flex justify-between items-center w-full ">
         {/* Left: Logo */}
         <Link href="/" className="flex items-center ml-3">
-          <h1 className="font-medium text-xl">Cognisight</h1>
+          <h1 className="font-medium text-xl">CogniSight</h1>
         </Link>
         {/* Center: Navigation links */}
         <div className="flex gap-8">
-          <a href="#" className="text-white/70 hover:text-white">Home</a>
-          <a href="#" className="text-white/70 hover:text-white">Services</a>
-          <a href="#" className="text-white/70 hover:text-white">Market</a>
-          <a href="#" className="text-white/70 hover:text-white">FAQs</a>
+          <Link href="#" className="text-white/70 hover:text-white">Home</Link>
+          <Link href="#" className="text-white/70 hover:text-white">Features</Link>
+          <Link href="#" className="text-white/70 hover:text-white">About</Link>
+          <Link href="#" className="text-white/70 hover:text-white">Contact</Link>
         </div>
         {/* Right: Account action */}
         <div className="flex items-center mr-3">

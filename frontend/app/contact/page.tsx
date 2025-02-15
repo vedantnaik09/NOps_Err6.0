@@ -42,7 +42,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="mt-6 text-xl text-gray-400 max-w-3xl mx-auto">
-            We'd love to hear from you! Whether you have questions about RESOLVR, want to explore a partnership, or need support, our team is here to help.
+            We'd love to hear from you! Whether you have questions about CogniSight, want to explore a partnership, or need support, our team is here to help.
           </p>
         </div>
 
@@ -131,8 +131,8 @@ export default function ContactPage() {
                   <Mail className="text-purple-500" />
                   <div>
                     <p className="text-white font-semibold">Email</p>
-                    <p className="text-gray-400">General Inquiries: info@resolvr.ai</p>
-                    <p className="text-gray-400">Support: support@resolvr.ai</p>
+                    <p className="text-gray-400">General Inquiries: info@cognisight.ai</p>
+                    <p className="text-gray-400">Support: support@cognisight.ai</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -150,7 +150,7 @@ export default function ContactPage() {
                 <CardTitle className="text-2xl text-white">FAQs</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-400">Looking for quick answers? Check out our FAQs for common questions.</p>
+                <p className="text-gray-400">Looking for quick answers? Check out our FAQs for common questions about our document intelligence solutions.</p>
                 <Button variant="link" className="mt-4 text-purple-500 hover:text-purple-400 p-0">
                   View FAQs
                   <ArrowRight className="ml-2 h-4 w-4" />

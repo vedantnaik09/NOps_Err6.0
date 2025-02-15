@@ -5,12 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FormElements extends HTMLFormControlsCollection {
   email: HTMLInputElement;
   password: HTMLInputElement;
-  userType: HTMLSelectElement;
 }
 
 interface LoginFormElement extends HTMLFormElement {
@@ -29,11 +27,8 @@ export function LoginForm() {
     const form = event.currentTarget;
     const email = form.elements.email.value;
     const password = form.elements.password.value;
-    const userType = form.elements.userType.value;
     
-    const route = userType === 'client' 
-      ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/login`
-      : `${process.env.NEXT_PUBLIC_BASE_URL}/api/authority/login`;
+    const route = `${process.env.NEXT_PUBLIC_BASE_URL}/api/users/login`;
   
     try {
       const response = await fetch(route, {
@@ -46,12 +41,7 @@ export function LoginForm() {
       
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('userType', userType);
-        if (userType === 'authority') {
-          push("/viewComplaint");
-        } else {
-          push("/dashboard");
-        }
+        push("/dashboard");
       } else {
         setError(data.message || 'Invalid credentials');
       }
@@ -67,24 +57,12 @@ export function LoginForm() {
     <div className="space-y-6">
       <form className="space-y-4" onSubmit={handleSignIn}>
         <div className="space-y-2">
-          <Label htmlFor="userType">User Type</Label>
-          <Select name="userType" required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select user type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="client">Client</SelectItem>
-              <SelectItem value="authority">Authority</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" placeholder="name@example.com" type="email" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" required />
+          <Input  id="password" name="password" type="password"  placeholder="********" required />
         </div>
         {error && <p className="text-red-500">{error}</p>}
         <Button type="submit" disabled={isLoading} className="w-full">

@@ -7,8 +7,8 @@ import { Navbar } from "@/components/layout/navbar";
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'RESOLVR - AI-Powered BPO Call Management',
-  description: 'Transform your BPO operations with AI-powered call scheduling, sentiment analysis, and automated workflows.',
+  title: 'CogniSight - PDF Intelligence Platform',
+  description: 'Transform unstructured PDFs into actionable intelligence with advanced AI-driven analysis, dynamic knowledge graphs, and predictive insights that uncover hidden patterns and drive informed decision-making.',
 };
 
 export default function RootLayout({
