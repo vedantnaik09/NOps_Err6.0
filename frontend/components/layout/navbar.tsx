@@ -67,10 +67,10 @@ export function Navbar() {
         </Link>
         {/* Center: Navigation links */}
         <div className="flex gap-8">
-          <Link href="#" className="text-white/70 hover:text-white">Home</Link>
-          <Link href="#" className="text-white/70 hover:text-white">Features</Link>
-          <Link href="#" className="text-white/70 hover:text-white">About</Link>
-          <Link href="#" className="text-white/70 hover:text-white">Contact</Link>
+          <Link href="/" className="text-white/70 hover:text-white">Home</Link>
+          <Link href="/features" className="text-white/70 hover:text-white">Features</Link>
+          <Link href="/about" className="text-white/70 hover:text-white">About</Link>
+          <Link href="/contact" className="text-white/70 hover:text-white">Contact</Link>
         </div>
         {/* Right: Account action */}
         <div className="flex items-center mr-3">
