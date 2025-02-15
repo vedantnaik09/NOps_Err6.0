@@ -15,7 +15,7 @@ const ChatbotPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [messages, setMessages] = useState<
     { role: string; text: string; queryType?: string; data?: any; generatedQueries?: any; taskExecution?: any; pinecone?: any }[]
-  >([{ role: "bot", text: "Please upload a PDF to start the conversation." }]);
+  >([{ role: "system", text: "Please upload a PDF to start the conversation." }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -260,7 +260,7 @@ const ChatbotPage = () => {
 
   // Function to start a new chat session.
   const startNewChat = () => {
-    setMessages([{ role: "bot", text: "Please upload a PDF to start the conversation." }]);
+    setMessages([{ role: "system", text: "Please upload a PDF to start the conversation." }]);
     setConversationId(null);
     setRefreshChatHistory((prev) => !prev);
     setIsPdfUploaded(false);
@@ -282,7 +282,7 @@ const loadConversation = async (convId: string) => {
         if (data && data.messages) {
             setMessages(
                 data.messages.map((msg: any) => ({
-                    role: msg.role === "assistant" ? "bot" : "user",
+                    role: msg.role === "assistant" ? "bot" : msg.role, // Keep system role as-is
                     text: msg.content,
                     timestamp: msg.timestamp
                 }))
@@ -292,14 +292,13 @@ const loadConversation = async (convId: string) => {
             // Load any associated PDF files
             if (data.pdf_files && data.pdf_files.length > 0) {
                 setIsPdfUploaded(true);
-                setAttachedFileNames(data.pdf_files);
+                setAttachedFileNames([]);
             }
         }
     } catch (error) {
         console.error("Error loading conversation:", error);
     }
 };
-
   // Callback for selecting a chat from the sidebar.
   const handleSelectChat = async (convId: string) => {
     console.log("Selected conversation:", convId);
@@ -438,18 +437,22 @@ const loadConversation = async (convId: string) => {
           <span>AI Chat Assistant</span>
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-  {messages.map((msg, index) => (
+        {messages.map((msg, index) => (
     <div key={index} className="space-y-2">
       <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
         <div
           className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
             msg.role === "user" 
               ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white" 
-              : "bg-gray-800 text-white"
+              : msg.role === "system"
+              ? "bg-gray-800 text-green-400"  // System messages in green
+              : "bg-gray-800 text-white"   // Bot messages in gray
           }`}
         >
           <div className="flex items-start space-x-3">
-            {msg.role === "bot" && <Bot className="w-6 h-6 mt-1 text-white/80" />}
+            {(msg.role === "bot" || msg.role === "system") && (
+              <Bot className="w-6 h-6 mt-1 text-white/80" />
+            )}
             <div className="space-y-2 w-full">
               {msg.data && msg.data.status === "success" ? (
                 <div className="text-green-400">
