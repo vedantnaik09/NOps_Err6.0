@@ -6,15 +6,11 @@ import { GradientText } from "@/components/ui/gradient-text";
 
 export function CTA() {
   return (
-    <section className="relative py-32">
+    <section className="relative py-32 bg-black/[0.85]">
       {/* Background with subtle patterns */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-black/[0.85]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.08),transparent_25%),radial-gradient(circle_at_70%_80%,rgba(192,132,252,0.08),transparent_25%)]" />
-      </div>
 
-      <div className="container relative mx-auto px-4">
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-900/50 border border-purple-100/20 dark:border-purple-900/20 shadow-2xl shadow-purple-500/5">
+      <div className="container relative mx-auto px-4 border-2 max-w-5xl rounded-2xl">
+        <div className="relative rounded-3xl overflow-hidden ">
           {/* Inner glow effect */}
           <div className="absolute inset-0 " />
           
