@@ -18,7 +18,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className='dark' suppressHydrationWarning={true}>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <body className={inter.className} suppressHydrationWarning={true}>
         <ThemeProvider
           attribute="class"
