@@ -28,7 +28,20 @@ async def register_user(user: UserSignup):
         "id": user_id,
         "user_type": "client"
     })
-    return {"token": token}
+    
+    # Prepare the response data
+    user_response = {
+        "token": token,
+        "user": {
+            "id": user_id,
+            "email": user.email,
+            "name": user.name,
+            "phoneNumber": user.phoneNumber,
+            "address": user.address,
+            "user_type": "client"
+        }
+    }
+    return user_response
 
 
 @router.post("/login", response_model=Token)
@@ -47,4 +60,18 @@ async def login_user(user: UserLogin):
         "id": str(found_user["_id"]),
         "user_type": "client"
     })
-    return {"token": token}
+    
+    # Prepare user data excluding sensitive information
+    user_data = {
+        "id": str(found_user["_id"]),
+        "email": found_user["email"],
+        "name": found_user["name"],
+        "phoneNumber": found_user["phoneNumber"],
+        "address": found_user["address"],
+        "user_type": found_user["user_type"]
+    }
+    
+    return {
+        "token": token,
+        "user": user_data
+    }

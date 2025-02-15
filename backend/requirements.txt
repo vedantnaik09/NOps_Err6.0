@@ -12,3 +12,5 @@ llama_index-llms-gemini
 Pypdf2
 pyvis
 python-multipart
+motor
+pymongo

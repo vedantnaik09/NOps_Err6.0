@@ -42,6 +42,8 @@ export function LoginForm() {
       
       if (response.ok) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('userType', data.user.user_type);
+        localStorage.setItem('userData', JSON.stringify(data.user));
         push("/dashboard");
       } else {
         setError(data.message || 'Invalid credentials');

@@ -15,5 +15,14 @@ class UserLogin(BaseModel):
     password: str
 
 # Model for returning a token
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    phoneNumber: str
+    address: str
+    user_type: str
+
 class Token(BaseModel):
     token: str
+    user: UserResponse

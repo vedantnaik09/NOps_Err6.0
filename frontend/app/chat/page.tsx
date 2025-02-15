@@ -15,7 +15,7 @@ const ChatbotPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [messages, setMessages] = useState<
     { role: string; text: string; queryType?: string; data?: any; generatedQueries?: any; taskExecution?: any; pinecone?: any }[]
-  >([{ role: "bot", text: "Hello! How can I assist you today?" }]);
+  >([{ role: "bot", text: "Please upload a PDF to start the conversation." }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -27,6 +27,7 @@ const ChatbotPage = () => {
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
+  const [isPdfUploaded, setIsPdfUploaded] = useState<boolean>(false);
 
   // Speech function using the browser API.
   const speak = (text: string) => {
@@ -88,16 +89,13 @@ const ChatbotPage = () => {
 
   // Retrieve the user ID from localStorage on component mount.
   useEffect(() => {
-    const persistRoot = localStorage.getItem("persist:root");
-    if (persistRoot) {
+    const userDataString = localStorage.getItem('userData');
+    if (userDataString) {
       try {
-        const parsedRoot = JSON.parse(persistRoot);
-        const parsedRootAuth = JSON.parse(parsedRoot.auth);
-        if (parsedRootAuth.user) {
-          setUserId(parsedRootAuth.user.id);
-        }
+        const userData = JSON.parse(userDataString);
+        setUserId(userData.id);
       } catch (error) {
-        console.error("Error parsing persist:root", error);
+        console.error("Error parsing user data from localStorage:", error);
       }
     }
   }, []);
@@ -143,18 +141,23 @@ const ChatbotPage = () => {
     const newMessages = [...messages, { role: "user", text: userInput }];
     setMessages(newMessages);
 
-    const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
-
     try {
-      const response = await fetch("http://localhost:5000/api/users/prompt", {
+      const formData = new FormData();
+      formData.append("text", userInput);
+      formData.append("user_id", userId || "");
+      if (conversationId) {
+        formData.append("conversation_id", conversationId);
+      }
+
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+
+      const response = await fetch("http://localhost:8000/api/users/process_text/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          prompt: userInput,
-          history: history,
-          conversationId,
-        }),
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
@@ -163,14 +166,14 @@ const ChatbotPage = () => {
 
       const data = await response.json();
 
-      if (!conversationId && data.conversationId) {
-        setConversationId(data.conversationId);
+      if (!conversationId && data.conversation_id) {
+        setConversationId(data.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
 
       const assistantMessage = {
         role: "bot",
-        text: data.content,
+        text: data.response, // Change from data.content to data.response
         queryType: data.queryType,
         data: data.data,
         generatedQueries: data.generatedQueries,
@@ -203,9 +206,14 @@ const ChatbotPage = () => {
     const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/prompt", {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch("http://localhost:8000/api/users/prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId,
           prompt: userInput,
@@ -252,20 +260,20 @@ const ChatbotPage = () => {
 
   // Function to start a new chat session.
   const startNewChat = () => {
-    setMessages([{ role: "bot", text: "Hello! How can I assist you today?" }]);
+    setMessages([{ role: "bot", text: "Please upload a PDF to start the conversation." }]);
     setConversationId(null);
     setRefreshChatHistory((prev) => !prev);
+    setIsPdfUploaded(false);
   };
 
   // Function to load a conversation by its ID.
   const loadConversation = async (convId: string) => {
     try {
-      const accessToken = getCookie("accessToken");
-      const response = await fetch(`http://localhost:5000/api/users/chat/${convId}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/users/chat/${convId}`, {
         headers: {
-          Authorization: `Bearer ${accessToken || ""}`,
-        },
-        credentials: "include",
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (!response.ok) {
         throw new Error("Failed to load conversation");
@@ -321,11 +329,20 @@ const ChatbotPage = () => {
 
     const formData = new FormData();
     formData.append("file", selectedFile);
+    formData.append("user_id", userId || "");
+    if (conversationId) {
+      formData.append("conversation_id", conversationId);
+    }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/users/process_pdf/`, {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch("http://localhost:8000/api/users/process_pdf/", {
         method: "POST",
         body: formData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
@@ -334,10 +351,19 @@ const ChatbotPage = () => {
 
       const data = await response.json();
 
-      // Store the response in localStorage
-      localStorage.setItem("knowledgeGraphData", data.html);
+      // Update conversation ID if not already set
+      if (!conversationId && data.conversation_id) {
+        setConversationId(data.conversation_id);
+        setRefreshChatHistory((prev) => !prev);
+      }
 
-      // Add a message to show the PDF was processed
+      // Store the response in localStorage with the conversation ID
+      localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
+
+      // After successful PDF upload
+      setIsPdfUploaded(true);
+
+      // Add message to show PDF was processed
       setMessages((prev) => [
         ...prev,
         {
@@ -397,99 +423,44 @@ const ChatbotPage = () => {
           <span>AI Chat Assistant</span>
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg, index) => {
-            let thinkContent = null;
-            let messageText = msg.text;
-            if (msg.text.includes("<think>")) {
-              const regex = /<think>([\s\S]*?)<\/think>/;
-              const match = msg.text.match(regex);
-              if (match) {
-                thinkContent = match[1].trim();
-                messageText = msg.text.replace(regex, "").trim();
-              }
-            }
-
-            const isExpanded = expandedMessages.has(index);
-            const hasDetails = msg.generatedQueries || msg.data || msg.pinecone;
-
-            return (
-              <div key={index} className="space-y-2">
-                {thinkContent && <div className="text-white/60 italic text-sm max-w-3xl">Thinking: {thinkContent}</div>}
-                <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
-                      msg.role === "user" ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white" : "bg-gray-800 text-white"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      {msg.role === "bot" && <Bot className="w-6 h-6 mt-1 text-white/80" />}
-                      <div className="space-y-2 w-full">
-                        <div className="message-content" dangerouslySetInnerHTML={{ __html: formatMessage(messageText) }} />
-                        {msg.queryType && (
-                          <div className="mt-2 text-xs text-white/80 flex items-center justify-between">
-                            <span>Source: {msg.queryType}</span>
-                            {hasDetails && (
-                              <button
-                                onClick={() => toggleMessageExpansion(index)}
-                                className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
-                              >
-                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                <span>{isExpanded ? "Hide Details" : "Show Details"}</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {isExpanded && (
-                          <div className="mt-2 space-y-3">
-                            {msg.data && (
-                              <div className="text-xs">
-                                <div className="font-semibold text-white/80 mb-1">Results:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.data, null, 2)}</pre>
-                              </div>
-                            )}
-                            {msg.generatedQueries && (
-                              <div className="text-xs">
-                                <div className="font-semibold text-white/80 mb-1">Generated Queries:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.generatedQueries, null, 2)}</pre>
-                              </div>
-                            )}
-                            {msg.pinecone && (
-                              <div className="text-xs">
-                                <div className="font-semibold text-white/80 mb-1">Knowledge Base Results (Index: {msg.pinecone.index}):</div>
-                                <div className="bg-gray-800 p-2 rounded-md text-white">
-                                  {msg.pinecone.matches.map((match: any, i: number) => (
-                                    <div key={i} className="mb-2">
-                                      <div className="text-white/70">
-                                        Match {i + 1} (Score: {match.score.toFixed(4)})
-                                      </div>
-                                      <div className="text-white">{match.text}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {msg.taskExecution && (
-                              <div className="text-xs">
-                                <div className="font-semibold text-white/80 mb-1">Task Execution Results:</div>
-                                <pre className="bg-gray-800 p-2 rounded-md overflow-x-auto text-white">{JSON.stringify(msg.taskExecution, null, 2)}</pre>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+  {messages.map((msg, index) => (
+    <div key={index} className="space-y-2">
+      <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+        <div
+          className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
+            msg.role === "user" 
+              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white" 
+              : "bg-gray-800 text-white"
+          }`}
+        >
+          <div className="flex items-start space-x-3">
+            {msg.role === "bot" && <Bot className="w-6 h-6 mt-1 text-white/80" />}
+            <div className="space-y-2 w-full">
+              {/* Handle PDF upload response */}
+              {msg.data && msg.data.status === "success" && (
+                <div className="text-green-400">
+                  {msg.data.content}
                 </div>
-              </div>
-            );
-          })}
-          {isLoading && (
-            <div className="flex justify-start">
-              <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+              )}
+              {/* Handle text response */}
+              {!msg.data && (
+                <div className="message-content">
+                  {msg.text}
+                </div>
+              )}
             </div>
-          )}
-          <div ref={messagesEndRef} />
+          </div>
         </div>
+      </div>
+    </div>
+  ))}
+  {isLoading && (
+    <div className="flex justify-start">
+      <Loader2 className="w-5 h-5 animate-spin text-white/60" />
+    </div>
+  )}
+  <div ref={messagesEndRef} />
+</div>
         <div className="bg-gray-900 p-4 flex items-center border-t border-gray-700">
           <div className="flex-1 relative flex items-center">
             <label htmlFor="file-upload" className="p-3 text-white/80 hover:text-white cursor-pointer" title="Attach PDF">
@@ -498,12 +469,20 @@ const ChatbotPage = () => {
             <input type="file" id="file-upload" className="hidden" accept=".pdf" onChange={handleFileSelect} />
             <input
               type="text"
-              className="w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
-              placeholder={attachedFileName || "Type your message..."}
-              value={attachedFileName ? "" : input}
+              className={`w-full p-3 bg-gray-800 text-white rounded-full border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
+                (!isPdfUploaded && !selectedFile) ? 'cursor-not-allowed' : ''
+              }`}
+              placeholder={
+                !isPdfUploaded && !selectedFile
+                  ? "Please upload a PDF first"
+                  : selectedFile 
+                    ? `Selected file: ${selectedFile.name}`
+                    : "Type your message..."
+              }
+              value={selectedFile ? "" : input}
               onChange={(e) => !selectedFile && setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              disabled={!!selectedFile}
+              onKeyDown={(e) => e.key === "Enter" && (isPdfUploaded || selectedFile) && handleSend()}
+              disabled={!isPdfUploaded && !selectedFile}
             />
             {(voiceTranscript || attachedFileName) && (
               <button
@@ -521,15 +500,25 @@ const ChatbotPage = () => {
           </div>
           <button
             onClick={handleSend}
-            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
-            disabled={isLoading || (!input.trim() && !selectedFile)}
+            className={`ml-2 p-3 rounded-full ${
+              isPdfUploaded || selectedFile
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
+                : 'bg-gray-600 cursor-not-allowed'
+            } transition-colors`}
+            disabled={isLoading || (!input.trim() && !selectedFile) || (!isPdfUploaded && !selectedFile)}
+            title={!isPdfUploaded && !selectedFile ? "Upload a PDF first" : "Send message"}
           >
             <Send className="w-5 h-5" />
           </button>
           <button
             onClick={() => setIsVoiceModalOpen(true)}
-            className="ml-2 p-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition-colors"
-            disabled={isLoading || !!selectedFile}
+            className={`ml-2 p-3 rounded-full ${
+              isPdfUploaded
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
+                : 'bg-gray-600 cursor-not-allowed'
+            } transition-colors`}
+            disabled={isLoading || !!selectedFile || !isPdfUploaded}
+            title={!isPdfUploaded ? "Upload a PDF first" : "Voice input"}
           >
             <Mic className="w-5 h-5" />
           </button>
