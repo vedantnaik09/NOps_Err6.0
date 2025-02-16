@@ -182,53 +182,52 @@ const ChatbotPage = () => {
     const userInput = transcript;
     setInput("");
     setIsLoading(true);
-
+  
     const newMessages = [...messages, { role: "user", text: transcript }];
     setMessages(newMessages);
-
-    const history = newMessages.map((msg) => (msg.role === "user" ? `User: ${msg.text}` : `Assistant: ${msg.text}`));
-
+  
     try {
+      const formData = new FormData();
+      formData.append("query", userInput);
+      formData.append("user_id", userId || "");
+      if (conversationId) {
+        formData.append("conversation_id", conversationId);
+      }
+  
       const token = localStorage.getItem("token");
-
-      const response = await fetch("http://localhost:8000/api/users/prompt", {
+  
+      const response = await fetch("http://localhost:8000/api/users/query/", {
         method: "POST",
+        body: formData,
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          userId,
-          prompt: userInput,
-          history: history,
-          conversationId,
-        }),
       });
-
+  
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
-
+  
       const data = await response.json();
-
-      if (!conversationId && data.conversationId) {
-        setConversationId(data.conversationId);
+  
+      if (!conversationId && data.conversation_id) {
+        setConversationId(data.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
-
+  
       const assistantMessage = {
         role: "bot",
-        text: data.content,
+        text: data.response,
         queryType: data.queryType,
         data: data.data,
         generatedQueries: data.generatedQueries,
         taskExecution: data.taskExecution,
         pinecone: data.pinecone,
       };
-
+  
       setMessages((prev) => [...prev, assistantMessage]);
-
-      let messageToSpeak = data.content;
+  
+      let messageToSpeak = data.response;
       if (messageToSpeak.includes("<think>")) {
         messageToSpeak = messageToSpeak.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
       }
@@ -240,6 +239,7 @@ const ChatbotPage = () => {
       setIsLoading(false);
     }
   };
+  
 
   // Function to start a new chat session.
   const startNewChat = () => {

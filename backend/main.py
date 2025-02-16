@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-from Routes import user_routes,graph,anomaly,analysis,report
+from Routes import user_routes, graph, anomaly, analysis, report
 
 load_dotenv()
 
@@ -16,15 +16,15 @@ app = FastAPI()
 
 # Allow requests only from your Next.js frontend running on localhost:3000
 origins = [
-    "*",
+    "http://localhost:3000",  # Explicitly allow your frontend origin
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Only allow these origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,  # Allow cookies and authentication headers
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Include your user routes
