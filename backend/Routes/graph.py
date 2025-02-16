@@ -1,5 +1,5 @@
 # graph.py
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException
 from security import get_current_user
 from fastapi.responses import JSONResponse
@@ -11,6 +11,8 @@ from Functions.knowledge_graph import process_pdfs, process_text
 from bson import ObjectId
 from security import get_current_user
 from typing import Annotated 
+from fastapi.responses import HTMLResponse
+from database import knowledge_graph_html_collection 
 
 router = APIRouter()
 
@@ -159,7 +161,8 @@ async def get_user_chats(user_id: Annotated[str, Depends(get_current_user)]):
             conversations.append({
                 "id": str(conv["_id"]),
                 "title": title,
-                "date": conv["created_at"].strftime("%d %b %Y")
+                "date": conv["created_at"].strftime("%d %b %Y"),
+                "created_at": conv["created_at"].strftime("%d %b %Y %H:%M:%S")  # Add time here
             })
         
         return JSONResponse(content={"data": conversations})
@@ -193,3 +196,60 @@ async def get_chat_details(conversation_id: str):
     
     except Exception as e:
         raise HTTPException(500, f"Failed to fetch chat: {str(e)}")
+
+@router.get("/knowledge-graph/{conversation_id}", response_class=HTMLResponse)
+async def get_knowledge_graph_html(conversation_id: str):
+    print(conversation_id)
+    try:
+        # Fetch the HTML content from MongoDB
+        html_document = await knowledge_graph_html_collection.find_one(
+            {"conversation_id": conversation_id}
+        )
+        if not html_document:
+            raise HTTPException(status_code=404, detail="Knowledge graph HTML not found")
+
+        # Return the HTML content
+        return HTMLResponse(content=html_document["html_content"])
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch knowledge graph HTML: {str(e)}")
+
+@router.get("/dashboard-stats")
+async def get_dashboard_stats():
+    try:
+        # Total conversations
+        total_conversations = await conversations_collection.count_documents({})
+        
+        # Total PDF files processed
+        total_pdfs = await conversations_collection.aggregate([
+            {"$unwind": "$pdf_files"},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]).to_list(length=1)
+        total_pdfs = total_pdfs[0]["count"] if total_pdfs else 0
+        
+        # Conversations in the last 7 days
+        last_7_days = datetime.utcnow() - timedelta(days=7)
+        recent_conversations = await conversations_collection.count_documents({
+            "created_at": {"$gte": last_7_days}
+        })
+        
+        # Total number of messages across all conversations
+        total_messages = await conversations_collection.aggregate([
+            {"$unwind": "$messages"},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]).to_list(length=1)
+        total_messages = total_messages[0]["count"] if total_messages else 0
+        
+        # Average number of messages per conversation
+        avg_messages_per_conversation = total_messages / total_conversations if total_conversations > 0 else 0
+        
+        return JSONResponse(content={
+            "total_conversations": total_conversations,
+            "total_pdfs": total_pdfs,
+            "recent_conversations": recent_conversations,
+            "total_messages": total_messages,
+            "avg_messages_per_conversation": round(avg_messages_per_conversation, 2)
+        })
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard stats: {str(e)}")
