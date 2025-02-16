@@ -19,3 +19,6 @@ PyMuPDF
 python-jose
 google-genai
 matplotlib
+aiohttp
+python-docx
+docx

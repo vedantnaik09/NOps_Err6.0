@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-from Routes import user_routes,graph,anomaly,analysis
+from Routes import user_routes,graph,anomaly,analysis,report
 
 load_dotenv()
 
@@ -32,7 +32,7 @@ app.include_router(user_routes.router, prefix="/api/users")
 app.include_router(graph.router, prefix="/api/users")
 app.include_router(anomaly.router, prefix="/api/anomaly")
 app.include_router(analysis.router, prefix="/api/analysis")
-
+app.include_router(report.router, prefix="/api/report", tags=["Report"])
 
 if __name__ == "__main__":
     import uvicorn
