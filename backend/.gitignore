@@ -6,3 +6,4 @@ llama_venv/
 __pycache__
 storage/
 /myenv/
+venv/
