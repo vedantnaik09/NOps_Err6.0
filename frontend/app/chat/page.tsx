@@ -18,6 +18,7 @@ const ChatbotPage = () => {
   >([{ role: "system", text: "Please upload a PDF to start the conversation. After uploading click on go to dashboard to get more insights." }]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [anomalyLoading, setIsAnomalyLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [refreshChatHistory, setRefreshChatHistory] = useState<boolean>(false);
@@ -28,6 +29,7 @@ const ChatbotPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [attachedFileNames, setAttachedFileNames] = useState<string[]>([]);
   const [isPdfUploaded, setIsPdfUploaded] = useState<boolean>(false);
+  const [anomalyData, setAnomalyData] = useState<any>(null); // New state for anomaly data
 
   // Speech function using the browser API.
   const speak = (text: string) => {
@@ -244,6 +246,7 @@ const ChatbotPage = () => {
     setConversationId(null);
     setRefreshChatHistory((prev) => !prev);
     setIsPdfUploaded(false);
+    setAnomalyData(null); // Reset anomaly data on new chat
   };
 
   // Update the loadConversation function in ChatbotPage
@@ -279,6 +282,7 @@ const ChatbotPage = () => {
       console.error("Error loading conversation:", error);
     }
   };
+
   // Callback for selecting a chat from the sidebar.
   const handleSelectChat = async (convId: string) => {
     console.log("Selected conversation:", convId);
@@ -312,53 +316,75 @@ const ChatbotPage = () => {
   const handleFileUpload = async () => {
     if (selectedFiles.length === 0) return;
     setIsLoading(true);
-
+    setIsAnomalyLoading(true);
+  
     const formData = new FormData();
     selectedFiles.forEach((file) => {
       formData.append(`files`, file);
     });
     formData.append("user_id", userId || "");
     if (conversationId) {
-      formData.append("conversation_id", conversationId);
+      formData.append("conversation_id", conversationId); // Ensure conversation_id is included
     }
-
+  
     try {
       const token = localStorage.getItem("token");
-
-      const response = await fetch("http://localhost:8000/api/users/process-pdfs/", {
+  
+      // Step 1: Process PDFs
+      const processResponse = await fetch("http://localhost:8000/api/users/process-pdfs/", {
         method: "POST",
         body: formData,
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      if (!response.ok) {
+  
+      if (!processResponse.ok) {
         throw new Error("Failed to process PDFs");
       }
-
-      const data = await response.json();
-
-      if (!conversationId && data.conversation_id) {
-        setConversationId(data.conversation_id);
+  
+      const processData = await processResponse.json();
+  
+      if (!conversationId && processData.conversation_id) {
+        setConversationId(processData.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
-
-      // Store the HTML data but don't display it
-      //   if (data.html && data.conversation_id) {
-      //     console.log(`knowledgeGraphData_${data.conversation_id}`)
-      //     localStorage.setItem(`knowledgeGraphData_${data.conversation_id}`, data.html);
-      //   }
-
+      setIsLoading(false);
       setIsPdfUploaded(true);
+
+      // Step 2: Fetch anomaly data
+      const anomalyFormData = new FormData();
+      selectedFiles.forEach((file) => {
+        anomalyFormData.append(`files`, file);
+      });
+      anomalyFormData.append("user_id", userId || "");
+      anomalyFormData.append("conversation_id", processData.conversation_id || ""); // Ensure conversation_id is included
+  
+      const anomalyResponse = await fetch("http://localhost:8000/api/anomaly/anomaly-processing", {
+        method: "POST",
+        body: anomalyFormData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!anomalyResponse.ok) {
+        throw new Error("Failed to fetch anomaly data");
+      }
+  
+      const anomalyData = await anomalyResponse.json();
+  
+      // Step 3: Store anomaly data in localStorage
+      localStorage.setItem(`anomalyData_${processData.conversation_id}`, JSON.stringify(anomalyData));
+  
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
-          text: data.message || `${selectedFiles.length} PDF(s) processed successfully!`,
+          text: processData.message || `${selectedFiles.length} PDF(s) processed successfully!`,
           data: {
-            status: data.status,
-            message: data.message,
+            status: processData.status,
+            message: processData.message,
           },
         },
       ]);
@@ -372,7 +398,7 @@ const ChatbotPage = () => {
         },
       ]);
     } finally {
-      setIsLoading(false);
+        setIsAnomalyLoading(false)
       setSelectedFiles([]);
       setAttachedFileNames([]);
     }
@@ -417,7 +443,25 @@ const ChatbotPage = () => {
             </Link>
             <span>AI Chat Assistant</span>
           </div>
-          {isPdfUploaded && <Link href={`/dashboard/${conversationId}`} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm">Go to dashboard</Link>}
+          {isPdfUploaded && (
+            <div className="flex gap-2">
+              <Link
+                href={`/dashboard/${conversationId}`}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm"
+              >
+                Dashboard
+              </Link>
+              {(isPdfUploaded && !anomalyLoading) ? <Link
+                href={{
+                  pathname: `/anomaly`,
+                  query: { user_id: userId, conversation_id: conversationId},
+                }}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm"
+              >
+                Anomalies
+              </Link>: <Loader2 className="w-5 h-5 animate-spin text-white/60 self-center items-center" />}
+            </div>
+          )}
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, index) => (

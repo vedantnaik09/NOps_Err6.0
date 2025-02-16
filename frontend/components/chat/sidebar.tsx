@@ -41,31 +41,37 @@ const Sidebar: React.FC<SidebarProps> = ({ userId, isOpen, onClose, onSelectChat
       }
     }, []);
 
-  useEffect(() => {
-    console.log("userId", userId);
-    if (userId) {
-      const fetchChats = async () => {
-        try {
-          const accessToken = localStorage.getItem("token");
-          const response = await fetch(`http://localhost:8000/api/users/chats`, {
-            headers: {
-              Authorization: `Bearer ${accessToken || ""}`,
-            },
-            credentials: "include",
-          });
-
-          if (!response.ok) throw new Error("Failed to fetch chats");
-
-          const data = await response.json();
-          setChatHistory(data.data || []);
-        } catch (err) {
-          console.error("Error fetching chat history:", err);
-        }
-      };
-
-      fetchChats();
-    }
-  }, [userId, refreshChatHistory]);
+    useEffect(() => {
+      console.log("userId", userId);
+      if (userId) {
+        const fetchChats = async () => {
+          try {
+            const accessToken = localStorage.getItem("token");
+            const response = await fetch(`http://localhost:8000/api/users/chats`, {
+              headers: {
+                Authorization: `Bearer ${accessToken || ""}`,
+              },
+              credentials: "include",
+            });
+    
+            if (!response.ok) throw new Error("Failed to fetch chats");
+    
+            const data = await response.json();
+            const sortedChats = (data.data || []).sort((a: { created_at: string | number | Date; }, b: { created_at: string | number | Date; }) => {
+              // Convert date strings to Date objects for comparison
+              const dateA = new Date(a.created_at).getTime(); // Convert to timestamp
+              const dateB = new Date(b.created_at).getTime(); // Convert to timestamp
+              return dateB - dateA; // Sort in descending order (latest first)
+            });
+            setChatHistory(sortedChats);
+          } catch (err) {
+            console.error("Error fetching chat history:", err);
+          }
+        };
+    
+        fetchChats();
+      }
+    }, [userId, refreshChatHistory]);
 
   return (
     <div

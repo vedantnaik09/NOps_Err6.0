@@ -161,7 +161,8 @@ async def get_user_chats(user_id: Annotated[str, Depends(get_current_user)]):
             conversations.append({
                 "id": str(conv["_id"]),
                 "title": title,
-                "date": conv["created_at"].strftime("%d %b %Y")
+                "date": conv["created_at"].strftime("%d %b %Y"),
+                "created_at": conv["created_at"].strftime("%d %b %Y %H:%M:%S")  # Add time here
             })
         
         return JSONResponse(content={"data": conversations})

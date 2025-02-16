@@ -1,7 +1,11 @@
 // app/anomaly/page.tsx
-import { AnomalyDisplay } from './anomaly-display'
+import { AnomalyDisplay } from './anomaly-display';
 
-export default function AnomalyPage() {
+export default function AnomalyPage({
+  searchParams,
+}: {
+  searchParams: { conversation_id: string, user_id: string };
+}) {
   return (
     <div className="bg-black min-h-screen">
       <div className="container px-4 py-24 mx-auto">
@@ -14,9 +18,9 @@ export default function AnomalyPage() {
           </p>
         </div>
         <div className="max-w-4xl mx-auto">
-          <AnomalyDisplay />
+          <AnomalyDisplay conversation_id={searchParams.conversation_id} user_id={searchParams.user_id} />
         </div>
       </div>
     </div>
-  )
+  );
 }
