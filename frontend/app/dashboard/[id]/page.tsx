@@ -154,7 +154,7 @@ export default function Page({ params }: { params: { id: string } }) {
           <Button
             size="lg"
             className="mt-8 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0 transition-all duration-300"
-            onClick={() => router.push("/analyze")}
+            onClick={() => router.push("/chat")}
           >
             Back to Analyze
             <ArrowRight className="ml-2 h-4 w-4" />
