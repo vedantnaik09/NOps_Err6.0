@@ -441,7 +441,7 @@ const ChatbotPage = () => {
             <Link href="/">
               <ArrowLeft />
             </Link>
-            <span>AI Chat Assistant</span>
+            <Link href="/">AI Chat Assistant</Link>
           </div>
           {isPdfUploaded && (
             <div className="flex gap-2">

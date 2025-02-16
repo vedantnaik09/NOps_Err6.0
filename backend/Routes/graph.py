@@ -1,5 +1,5 @@
 # graph.py
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException
 from security import get_current_user
 from fastapi.responses import JSONResponse
@@ -213,3 +213,43 @@ async def get_knowledge_graph_html(conversation_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch knowledge graph HTML: {str(e)}")
+
+@router.get("/dashboard-stats")
+async def get_dashboard_stats():
+    try:
+        # Total conversations
+        total_conversations = await conversations_collection.count_documents({})
+        
+        # Total PDF files processed
+        total_pdfs = await conversations_collection.aggregate([
+            {"$unwind": "$pdf_files"},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]).to_list(length=1)
+        total_pdfs = total_pdfs[0]["count"] if total_pdfs else 0
+        
+        # Conversations in the last 7 days
+        last_7_days = datetime.utcnow() - timedelta(days=7)
+        recent_conversations = await conversations_collection.count_documents({
+            "created_at": {"$gte": last_7_days}
+        })
+        
+        # Total number of messages across all conversations
+        total_messages = await conversations_collection.aggregate([
+            {"$unwind": "$messages"},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]).to_list(length=1)
+        total_messages = total_messages[0]["count"] if total_messages else 0
+        
+        # Average number of messages per conversation
+        avg_messages_per_conversation = total_messages / total_conversations if total_conversations > 0 else 0
+        
+        return JSONResponse(content={
+            "total_conversations": total_conversations,
+            "total_pdfs": total_pdfs,
+            "recent_conversations": recent_conversations,
+            "total_messages": total_messages,
+            "avg_messages_per_conversation": round(avg_messages_per_conversation, 2)
+        })
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard stats: {str(e)}")
