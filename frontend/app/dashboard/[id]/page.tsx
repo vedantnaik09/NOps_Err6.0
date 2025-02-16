@@ -73,6 +73,16 @@ export default function Page({ params }: { params: { id: string } }) {
     fetchData();
   }, [id]);
 
+  function formatFileName(filename: string): string {
+    // Remove the file extension
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+    // Split on underscores and capitalize each word
+    return nameWithoutExt
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -86,9 +96,11 @@ export default function Page({ params }: { params: { id: string } }) {
 
           {/* Title */}
           <h1 className="text-4xl md:text-3xl font-bold tracking-tight mb-8">
-            Knowledge Graph for Conversation <h3 className="text-3xl mt-2 font-light"><GradientText>{conversationDetails?.title}</GradientText></h3>
+            Knowledge Graph for Conversation{" "}
+            <h3 className="text-3xl mt-2 font-light">
+              <GradientText>{conversationDetails?.title}</GradientText>
+            </h3>
           </h1>
-
 
           {/* Flex container for both Iframe and Images */}
           <div className="flex flex-wrap justify-center gap-8 w-full">
@@ -104,9 +116,7 @@ export default function Page({ params }: { params: { id: string } }) {
                 )}
                 {iframeError && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <p className="text-red-400">
-                      Failed to load visualization. Please try again.
-                    </p>
+                    <p className="text-red-400">Failed to load visualization. Please try again.</p>
                   </div>
                 )}
                 <iframe
@@ -134,12 +144,8 @@ export default function Page({ params }: { params: { id: string } }) {
                 key={index}
                 className="w-full sm:w-[45%] h-[650px] bg-gray-800 rounded-lg border border-gray-700 p-6 flex flex-col justify-center items-center"
               >
-                <h2 className="text-xl font-semibold mb-4">{image.filename}</h2>
-                <img
-                  src={`data:image/jpeg;base64,${image.base64}`}
-                  alt={image.filename}
-                  className="object-cover w-fit rounded-lg"
-                />
+                <h2 className="text-xl font-semibold mb-4">{formatFileName(image.filename)}</h2>
+                <img src={`data:image/jpeg;base64,${image.base64}`} alt={image.filename} className="object-cover w-fit rounded-lg" />
               </div>
             ))}
           </div>
