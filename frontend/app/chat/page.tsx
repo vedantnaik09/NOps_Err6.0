@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { openDB, saveToDB } from "@/utils/indexedDB";
 import { Send, Bot, Loader2, ArrowLeft, Mic, ChevronDown, ChevronRight, X, FileUp } from "lucide-react";
 import Sidebar from "@/components/chat/sidebar";
 import Link from "next/link";
@@ -317,19 +318,19 @@ const ChatbotPage = () => {
     if (selectedFiles.length === 0) return;
     setIsLoading(true);
     setIsAnomalyLoading(true);
-  
+
     const formData = new FormData();
     selectedFiles.forEach((file) => {
       formData.append(`files`, file);
     });
     formData.append("user_id", userId || "");
     if (conversationId) {
-      formData.append("conversation_id", conversationId); // Ensure conversation_id is included
+      formData.append("conversation_id", conversationId);
     }
-  
+
     try {
       const token = localStorage.getItem("token");
-  
+
       // Step 1: Process PDFs
       const processResponse = await fetch("http://localhost:8000/api/users/process-pdfs/", {
         method: "POST",
@@ -338,45 +339,18 @@ const ChatbotPage = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       if (!processResponse.ok) {
         throw new Error("Failed to process PDFs");
       }
-  
+
       const processData = await processResponse.json();
-  
+
       if (!conversationId && processData.conversation_id) {
         setConversationId(processData.conversation_id);
         setRefreshChatHistory((prev) => !prev);
       }
-      setIsLoading(false);
-      setIsPdfUploaded(true);
 
-      // Step 2: Fetch anomaly data
-      const anomalyFormData = new FormData();
-      selectedFiles.forEach((file) => {
-        anomalyFormData.append(`files`, file);
-      });
-      anomalyFormData.append("user_id", userId || "");
-      anomalyFormData.append("conversation_id", processData.conversation_id || ""); // Ensure conversation_id is included
-  
-      const anomalyResponse = await fetch("http://localhost:8000/api/anomaly/anomaly-processing", {
-        method: "POST",
-        body: anomalyFormData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      if (!anomalyResponse.ok) {
-        throw new Error("Failed to fetch anomaly data");
-      }
-  
-      const anomalyData = await anomalyResponse.json();
-  
-      // Step 3: Store anomaly data in localStorage
-      localStorage.setItem(`anomalyData_${processData.conversation_id}`, JSON.stringify(anomalyData));
-  
       setMessages((prev) => [
         ...prev,
         {
@@ -388,6 +362,61 @@ const ChatbotPage = () => {
           },
         },
       ]);
+
+      setIsPdfUploaded(true);
+      setIsLoading(false);
+
+      // Step 2: Call the analysis route to generate visualizations
+      const analysisFormData = new FormData();
+      selectedFiles.forEach((file) => {
+        analysisFormData.append(`files`, file);
+      });
+      analysisFormData.append("user_id", userId || "");
+      analysisFormData.append("conversation_id", processData.conversation_id || "");
+
+      const analysisResponse = await fetch("http://localhost:8000/api/analysis/structured_json/", {
+        method: "POST",
+        body: analysisFormData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!analysisResponse.ok) {
+        throw new Error("Failed to fetch analysis data");
+      }
+
+      const analysisData = await analysisResponse.json();
+
+      // Save analysis data to IndexedDB
+      const db = await openDB("ChatbotDB", "analysisData");
+      await saveToDB(db, "analysisData", {
+        id: `analysisData_${processData.conversation_id}`,
+        value: analysisData,
+      });
+
+      // Step 3: Fetch anomaly data
+      const anomalyFormData = new FormData();
+      selectedFiles.forEach((file) => {
+        anomalyFormData.append(`files`, file);
+      });
+      anomalyFormData.append("user_id", userId || "");
+      anomalyFormData.append("conversation_id", processData.conversation_id || "");
+
+      const anomalyResponse = await fetch("http://localhost:8000/api/anomaly/anomaly-processing", {
+        method: "POST",
+        body: anomalyFormData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!anomalyResponse.ok) {
+        throw new Error("Failed to fetch anomaly data");
+      }
+
+      const anomalyData = await anomalyResponse.json();
+      localStorage.setItem(`anomalyData_${processData.conversation_id}`, JSON.stringify(anomalyData));
     } catch (error) {
       console.error("Error processing PDFs:", error);
       setMessages((prev) => [
@@ -398,7 +427,7 @@ const ChatbotPage = () => {
         },
       ]);
     } finally {
-        setIsAnomalyLoading(false)
+      setIsAnomalyLoading(false);
       setSelectedFiles([]);
       setAttachedFileNames([]);
     }
@@ -447,19 +476,26 @@ const ChatbotPage = () => {
             <div className="flex gap-2">
               <Link
                 href={`/dashboard/${conversationId}`}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm"
+                className={`bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm ${
+                  anomalyLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                onClick={(e) => anomalyLoading && e.preventDefault()}
               >
                 Dashboard
               </Link>
-              {(isPdfUploaded && !anomalyLoading) ? <Link
-                href={{
-                  pathname: `/anomaly`,
-                  query: { user_id: userId, conversation_id: conversationId},
-                }}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm"
-              >
-                Anomalies
-              </Link>: <Loader2 className="w-5 h-5 animate-spin text-white/60 self-center items-center" />}
+              {isPdfUploaded && !anomalyLoading ? (
+                <Link
+                  href={{
+                    pathname: `/anomaly`,
+                    query: { user_id: userId, conversation_id: conversationId },
+                  }}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 p-2 rounded-xl text-sm"
+                >
+                  Anomalies
+                </Link>
+              ) : (
+                <Loader2 className="w-5 h-5 animate-spin text-white/60 self-center items-center" />
+              )}
             </div>
           )}
         </header>
@@ -468,7 +504,7 @@ const ChatbotPage = () => {
             <div key={index} className="space-y-2">
               <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-105 ${
+                  className={`max-w-3xl p-4 rounded-2xl shadow-lg border transition-transform hover:scale-[1.02] ${
                     msg.role === "user"
                       ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white"
                       : msg.role === "system"

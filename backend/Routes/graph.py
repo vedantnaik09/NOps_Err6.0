@@ -170,13 +170,19 @@ async def get_user_chats(user_id: Annotated[str, Depends(get_current_user)]):
     except Exception as e:
         raise HTTPException(500, f"Failed to fetch chats: {str(e)}")
     
-# Add to graph.py
 @router.get("/chat/{conversation_id}")
 async def get_chat_details(conversation_id: str):
     try:
         conv = await conversations_collection.find_one({"_id": ObjectId(conversation_id)})
         if not conv:
             raise HTTPException(404, "Conversation not found")
+
+        # Create title from PDF filenames
+        title = "New Chat"
+        if conv.get("pdf_files"):
+            title = ", ".join([os.path.splitext(f)[0] for f in conv["pdf_files"]][:3])
+            if len(conv["pdf_files"]) > 3:
+                title += "..."
 
         # Convert datetime objects to ISO strings
         processed_messages = []
@@ -189,7 +195,7 @@ async def get_chat_details(conversation_id: str):
         return JSONResponse(content={
             "messages": processed_messages,
             "pdf_files": conv.get("pdf_files", []),
-            # Include other fields if needed with proper serialization
+            "title": title,  # Include the title here
             "created_at": conv.get("created_at").isoformat() if conv.get("created_at") else None,
             "updated_at": conv.get("updated_at").isoformat() if conv.get("updated_at") else None
         })
